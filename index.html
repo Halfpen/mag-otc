@@ -260,4 +260,5 @@ function showAll_A(){HA.clear();document.querySelectorAll('tbody tr[id^="row_"]'
 function hideAll_A(){document.querySelectorAll('tbody tr[id^="row_"]').forEach(r=>{HA.add(r.id);r.classList.add('rowhid')});document.querySelectorAll('.ac').forEach(d=>{d.classList.add('hid');d.querySelector('input').checked=false;});upd();}
 function upd(){document.getElementById('hc').textContent=HA.size>0?`已隱藏 ${HA.size} 項`:'';}
 loadHistPrices();showR(60);
+setTimeout(function(){var wrap=document.querySelector('.wrap');var th=document.querySelector('thead th.today');if(wrap&&th){wrap.scrollLeft=Math.max(0,th.offsetLeft+th.offsetWidth-wrap.clientWidth+16);}},0);
 </script></body></html>
