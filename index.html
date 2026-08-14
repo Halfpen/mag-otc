@@ -51,7 +51,7 @@ td.nm:hover{color:#fff;background:#161626!important;}
 .kd-jin{background:color-mix(in srgb,var(--kd-jin-col) 15%,#000)!important;box-shadow:inset 0 0 0 3px var(--kd-jin-col);}
 .kd-tui{background:color-mix(in srgb,var(--kd-tui-col) 15%,#000)!important;box-shadow:inset 0 0 0 3px var(--kd-tui-col);}
 /* 進場期做多最佳止盈點：雙純綠線 */
-.kd-jin-tp{background:#001a00!important;outline:2px dashed #00ff00;outline-offset:-1px;box-shadow:none!important;}
+.kd-jin-tp{background:#001a00!important;box-shadow:none!important;position:relative;}.kd-jin-tp::after{content:"";position:absolute;inset:3px;border:2px dashed #00ff00;border-radius:50%;pointer-events:none;z-index:2;}
 .kd-jin-tp.jin-hot{background:#0a2200!important;box-shadow:inset 0 0 0 2px #00ff00,inset 0 0 0 5px #0a2200,inset 0 0 0 7px #00ff00!important;}
 /* 退場期做空最佳止盈點：雙純紅線 */
 .kd-tui-tp{background:#1a0000!important;outline:2px dashed #ff0000;outline-offset:-1px;box-shadow:none!important;}
@@ -501,7 +501,7 @@ tr:hover td{filter:brightness(1.45);}.rowhid{display:none;}
           <div class="cb hot">+210</div>
           <div class="pr">76.4</div>
         </td>
-        <td class="today-col jin kd-jin" data-ck="coins|SOL" title="2026-08-14 SOL: mag=994, brk=160, 進場期D5">
+                <td class="today-col jin kd-jin-tp" data-ck="coins|SOL" title="2026-08-14 SOL: mag=994, brk=160, 進場期D5【做多止盈】">
           <div class="cp">進D5</div>
           <div class="cv">994</div>
           <div class="cb pos">+160</div>
@@ -3245,7 +3245,7 @@ tr:hover td{filter:brightness(1.45);}.rowhid{display:none;}
           <div class="cb hot">+207</div>
           <div class="pr">---</div>
         </td>
-        <td class="today-col jin kd-jin" data-ck="macro|CN_PCB" title="2026-08-14 CN_PCB: mag=895, brk=132, 進場期D3">
+                <td class="today-col jin kd-jin-tp" data-ck="macro|CN_PCB" title="2026-08-14 CN_PCB: mag=895, brk=132, 進場期D3【做多止盈】">
           <div class="cp">進D3</div>
           <div class="cv">895</div>
           <div class="cb pos">+132</div>
@@ -3415,7 +3415,7 @@ tr:hover td{filter:brightness(1.45);}.rowhid{display:none;}
           <div class="cb hot">+213</div>
           <div class="pr">---</div>
         </td>
-        <td class="today-col jin kd-jin" data-ck="macro|CN_SEMICONDUCTOR" title="2026-08-14 CN_SEMI: mag=647, brk=184, 進場期D3">
+                <td class="today-col jin kd-jin-tp" data-ck="macro|CN_SEMICONDUCTOR" title="2026-08-14 CN_SEMI: mag=647, brk=184, 進場期D3【做多止盈】">
           <div class="cp">進D3</div>
           <div class="cv">647</div>
           <div class="cb pos">+184</div>
