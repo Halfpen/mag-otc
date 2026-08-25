@@ -372,10 +372,10 @@ function parseData() {
   const found = new Map();
   for (const { ck, text } of groups) {
     if (found.has(ck)) continue;
-    // 容錯：「场外指数」有時被打成「场外指」（缺数字）
-    const mm = text.match(/场外指数(\d+)/) || text.match(/場外指數(\d+)/)
-            || text.match(/场外指(\d+)/)   || text.match(/場外指(\d+)/);
-    const bm = text.match(/爆破指数(-?\d+)/) || text.match(/爆破指數(-?\d+)/);
+    // 容錯：允許「场外指数 1172」中的空格，以及「场外指805」缺「数」
+    const mm = text.match(/场外指数\s*(\d+)/) || text.match(/場外指數\s*(\d+)/)
+            || text.match(/场外指\s*(\d+)/)   || text.match(/場外指\s*(\d+)/);
+    const bm = text.match(/爆破指数\s*(-?\d+)/) || text.match(/爆破指數\s*(-?\d+)/);
     const p  = extractPeriod(text);
     if (mm && bm && p)
       found.set(ck, { ck, mag:+mm[1], brk:+bm[1], period:p, zj:/逼近/.test(text), kd:'', jl:'' });
@@ -383,7 +383,14 @@ function parseData() {
 
   rows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag:'', brk:'', period:'', zj:false, kd:'', jl:'' });
   document.getElementById('parse-hint').textContent = `識別 ${rows.filter(r=>r.mag!=='').length}/43`;
+  // 自動計算 KD（解析後立即觸發）
+  rows.forEach((row, i) => {
+    if (row.mag==='' || row.brk==='' || !row.period) return;
+    const r = computeKdJl(row.ck, +row.mag, +row.brk, row.period);
+    rows[i].kd = r.kd; rows[i].jl = r.jl;
+  });
   renderTable();
+  renderKdEvents();
   setStep(3);
   show('c3');
 }
