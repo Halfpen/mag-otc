@@ -350,8 +350,23 @@ function parseData() {
   const raw = document.getElementById('inp-raw').value.trim();
   if (!raw) { alert('請貼入數據'); return; }
 
+  // 合併多行：把「爆破指數231」這類行接到上一行（Mag 報告常見格式）
+  const rawLines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const merged = [];
+  for (const line of rawLines) {
+    const hasBrk  = /爆破[指數数]/.test(line);
+    const hasName  = findCk(line) !== null;
+    const hasMag   = /场外指数|場外指數/.test(line);
+    // 純爆破行（沒有資產名也沒有場外指數）→ 接到上一行
+    if (hasBrk && !hasName && !hasMag && merged.length > 0) {
+      merged[merged.length - 1] += ' ' + line;
+    } else {
+      merged.push(line);
+    }
+  }
+
   const found = new Map();
-  for (const line of raw.split('\n').map(l=>l.trim()).filter(Boolean)) {
+  for (const line of merged) {
     const ck = findCk(line);
     if (!ck || found.has(ck)) continue;
     const mm = line.match(/场外指数(\d+)/) || line.match(/場外指數(\d+)/);
