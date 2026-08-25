@@ -304,6 +304,27 @@ async function ghWrite(path, content, message, onProgress) {
   onProgress('');
 }
 
+// 透過 Git Data API 讀取 index.html（繞過 raw CDN 快取）
+async function ghReadHtml() {
+  const ref    = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
+  const commitSha = ref.object?.sha;
+  if (!commitSha) throw new Error('無法取得 ref SHA');
+  const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
+  const treeSha = commit.tree?.sha;
+  const tree   = await (await ghReq(`/repos/${REPO}/git/trees/${treeSha}`)).json();
+  const entry  = tree.tree?.find(e => e.path === 'index.html');
+  if (!entry)  throw new Error('index.html 不在 tree 中');
+  const blobRes = await fetch(`${API}/repos/${REPO}/git/blobs/${entry.sha}`, {
+    headers: {
+      Authorization: 'Bearer ' + PAT,
+      Accept: 'application/vnd.github.raw+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
+  });
+  if (!blobRes.ok) throw new Error('讀取 blob 失敗 ' + blobRes.status);
+  return await blobRes.text();
+}
+
 // ── ① 連線 ───────────────────────────────────────────────────────────────────
 async function connect() {
   PAT = document.getElementById('inp-pat').value.trim()
@@ -315,15 +336,21 @@ async function connect() {
     const u = await ghReq('/user');
     if (!u.ok) throw new Error('PAT 無效 (' + u.status + ')');
     const { login } = await u.json();
-    showMsg('msg1', 'warn', '下載 index.html...');
-    const raw = await fetch(`${RAW}/index.html?_=${Date.now()}`);
-    if (!raw.ok) throw new Error('無法讀取 index.html');
-    html = await raw.text();
+    showMsg('msg1', 'warn', '下載 index.html（直接讀 blob，確保最新）...');
+    html = await ghReadHtml();
     localStorage.setItem('mag_pat', PAT);
-    showMsg('msg1', 'ok', `✓ 連線成功 (${login})，index.html ${(html.length/1024).toFixed(0)} KB`);
-    document.getElementById('inp-date').value = new Date().toISOString().slice(0, 10);
-    setStep(2);
-    show('c2');
+    const sz = (html.length/1024).toFixed(0);
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('inp-date').value = today;
+    date = today;  // 設定全域 date，讓④可以直接使用
+    // 偵測今天是否已有數據
+    if (html.includes(`title="${today} `)) {
+      showMsg('msg1', 'ok', `✓ 連線成功 (${login})，${sz} KB ｜ ⚠️ ${today} 已有數據，直接執行④`);
+      setStep(4); show('c4'); buildPriceTable();
+    } else {
+      showMsg('msg1', 'ok', `✓ 連線成功 (${login})，index.html ${sz} KB`);
+      setStep(2); show('c2');
+    }
   } catch(e) { showMsg('msg1', 'err', '❌ ' + e.message); }
   document.getElementById('btn-con').disabled = false;
 }
@@ -641,9 +668,10 @@ async function fetchAllPrices() {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
         price = parseFloat((await r.json()).price);
       } else if (src==='KUCOIN') {
-        const kcUrl = `https://api.kucoin.com/api/v1/market/stats?symbol=${sym}`;
+        const kcUrl = `https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${sym}`;
         const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(kcUrl)}`);
-        price = parseFloat((await r.json()).data?.last);
+        const d = await r.json();
+        price = parseFloat(d.data?.price ?? d.data?.last ?? d.data?.sell);
       } else {
         // Yahoo Finance — wrap with CORS proxy to bypass browser restrictions
         const yUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`;
@@ -653,8 +681,13 @@ async function fetchAllPrices() {
       }
       const fmt = fmtPrice(price, src);
       document.getElementById('pr-'+id).value = fmt || '';
-      if (st) { st.textContent='✓'; st.style.color='#34d399'; }
-      ok++;
+      if (fmt) {
+        if (st) { st.textContent='✓'; st.style.color='#34d399'; }
+        ok++;
+      } else {
+        if (st) { st.textContent='✗'; st.style.color='#f87171'; }
+        fail++;
+      }
     } catch {
       if (st) { st.textContent='✗'; st.style.color='#f87171'; }
       fail++;
