@@ -225,12 +225,15 @@ const NAME_TO_CK = {
   'CN_MLCC':'macro|CN_MLCC','MLCC':'macro|CN_MLCC',
   'CN_SEMICONDUCTOR':'macro|CN_SEMICONDUCTOR','CN_Semi':'macro|CN_SEMICONDUCTOR',
   '半导体ETF':'macro|CN_SEMICONDUCTOR','半导体':'macro|CN_SEMICONDUCTOR',
+  '人工智能':'macro|CN_AI_ETF',   // 国内人工智能etf
   'GOLD':'commodities|GOLD','XAU':'commodities|GOLD','黄金':'commodities|GOLD',
   'SILVER':'commodities|SILVER','XAG':'commodities|SILVER','白银':'commodities|SILVER',
   'OIL':'commodities|OIL','Brent':'commodities|OIL','原油':'commodities|OIL',
   '布伦特':'commodities|OIL','布倫特':'commodities|OIL',
   'COPPER':'commodities|COPPER','铜':'commodities|COPPER','銅':'commodities|COPPER',
   'PORK':'commodities|PORK','猪肉':'commodities|PORK','豬肉':'commodities|PORK',
+  '生猪':'commodities|PORK',       // 国内生猪
+  '纳指':'macro|NASDAQ_OTC','美股纳指':'macro|NASDAQ_OTC',  // 美股纳指OTC
 };
 
 // ── 狀態 ─────────────────────────────────────────────────────────────────────
@@ -334,7 +337,8 @@ function findCk(line) {
 }
 
 function extractPeriod(line) {
-  const m = line.match(/([进進退]).*?场期第?(\d+)天/) || line.match(/([進退])場期D(\d+)/);
+  // 「期」和「第」都可能缺失（如：进场4天、场外退场第1天、进场期第5天）
+  const m = line.match(/([进進退]).*?场[期]?第?(\d+)[天月]/) || line.match(/([進退])場[期]?D(\d+)/);
   if (!m) return null;
   return ((m[1]==='进'||m[1]==='進') ? '進場期' : '退場期') + 'D' + m[2];
 }
@@ -351,30 +355,30 @@ function parseData() {
   const raw = document.getElementById('inp-raw').value.trim();
   if (!raw) { alert('請貼入數據'); return; }
 
-  // 合併多行：把「爆破指數231」這類行接到上一行（Mag 報告常見格式）
+  // 以資產名稱為錨點分組：遇到含資產名的行就開新組，其餘行全部接到當前組
   const rawLines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  const merged = [];
+  const groups = [];   // [{ck, text}]
+  let cur = null;
   for (const line of rawLines) {
-    const hasBrk  = /爆破[指數数]/.test(line);
-    const hasName  = findCk(line) !== null;
-    const hasMag   = /场外指数|場外指數/.test(line);
-    // 純爆破行（沒有資產名也沒有場外指數）→ 接到上一行
-    if (hasBrk && !hasName && !hasMag && merged.length > 0) {
-      merged[merged.length - 1] += ' ' + line;
-    } else {
-      merged.push(line);
+    const ck = findCk(line);
+    if (ck) {
+      cur = { ck, text: line };
+      groups.push(cur);
+    } else if (cur) {
+      cur.text += ' ' + line;
     }
   }
 
   const found = new Map();
-  for (const line of merged) {
-    const ck = findCk(line);
-    if (!ck || found.has(ck)) continue;
-    const mm = line.match(/场外指数(\d+)/) || line.match(/場外指數(\d+)/);
-    const bm = line.match(/爆破指数(-?\d+)/) || line.match(/爆破指數(-?\d+)/);
-    const p  = extractPeriod(line);
+  for (const { ck, text } of groups) {
+    if (found.has(ck)) continue;
+    // 容錯：「场外指数」有時被打成「场外指」（缺数字）
+    const mm = text.match(/场外指数(\d+)/) || text.match(/場外指數(\d+)/)
+            || text.match(/场外指(\d+)/)   || text.match(/場外指(\d+)/);
+    const bm = text.match(/爆破指数(-?\d+)/) || text.match(/爆破指數(-?\d+)/);
+    const p  = extractPeriod(text);
     if (mm && bm && p)
-      found.set(ck, { ck, mag:+mm[1], brk:+bm[1], period:p, zj:/逼近/.test(line), kd:'', jl:'' });
+      found.set(ck, { ck, mag:+mm[1], brk:+bm[1], period:p, zj:/逼近/.test(text), kd:'', jl:'' });
   }
 
   rows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag:'', brk:'', period:'', zj:false, kd:'', jl:'' });
