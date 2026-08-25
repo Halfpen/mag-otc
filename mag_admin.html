@@ -461,7 +461,20 @@ function computeKdJl(ck, mag, brk, period) {
   let kd='', jl='';
   if (day===1) {
     kd = isJin ? 'jin' : 'tui';
-    jl = isJin ? (brk>200?'劣進D1':'優進D1') : (brk<0?'劣退D1':'優退D1');
+    if (isJin) {
+      // 進場期D1：brk>200 直接劣進
+      jl = brk > 200 ? '劣進D1' : '優進D1';
+    } else {
+      // 退場期D1：
+      // 1. brk<0 → 直接劣退
+      // 2. brk≥0 → 比較 mag 與上次退場期關鍵節點
+      if (brk < 0) {
+        jl = '劣退D1';
+      } else {
+        const pkm = lastKdMag(ck, false);
+        jl = (pkm !== null && mag > pkm) ? '劣退D1' : '優退D1';
+      }
+    }
   } else if (pb !== null) {
     if (isJin && pb>200 && brk<=200) {
       const pkm = lastKdMag(ck, true);
