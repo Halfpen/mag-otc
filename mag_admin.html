@@ -564,18 +564,40 @@ function makeCell(row) {
 
 function buildNewHtml() {
   let h = html.replace(/\btoday-col /g, '');
+  const [mo, dy] = date.slice(5).split('-').map(Number);
+  const label = `${mo}/${dy}`;
 
-  // 找舊 today-th
+  // Step 1: 無條件清除今天日期的舊 cells（含重複）；若不存在則 no-op
+  for (const row of rows) {
+    const marker = `data-ck="${row.ck}" title="${date} `;
+    let safety = 0;
+    while (h.includes(marker) && safety++ < 5) {
+      const mIdx    = h.indexOf(marker);
+      const tdStart = h.lastIndexOf('<td', mIdx);
+      const tdEnd   = h.indexOf('</td>', mIdx) + 5;
+      const start   = (tdStart > 0 && h[tdStart - 1] === '\n') ? tdStart - 1 : tdStart;
+      h = h.slice(0, start) + h.slice(tdEnd);
+    }
+  }
+
+  // Step 2: 清除 thead 中今天日期的 th（含重複）
+  const thPlain = `<th title="${date}">${label}</th>`;
+  const thToday = `<th class="today" title="${date}">${label}</th>`;
+  while (h.includes(thPlain)) h = h.replace(thPlain, '');
+  while (h.includes(thToday)) h = h.replace(thToday, '');
+
+  // Step 3: 把現有 today-th（前一天）降為普通 th
   const pm = h.match(/<th class="today" title="(\d{4}-\d{2}-\d{2})">/);
-  if (!pm) throw new Error('找不到 thead today 標記');
-  const prevDate  = pm[1];
-  const prevLabel = prevDate.slice(5).replace('-', '/');
-  h = h.replace(
-    `<th class="today" title="${prevDate}">${prevLabel}</th>`,
-    `<th title="${prevDate}">${prevLabel}</th>`
-  );
+  if (pm) {
+    const prevDate  = pm[1];
+    const prevLabel = prevDate.slice(5).replace('-', '/');
+    h = h.replace(
+      `<th class="today" title="${prevDate}">${prevLabel}</th>`,
+      `<th title="${prevDate}">${prevLabel}</th>`
+    );
+  }
 
-  // 插入 cells
+  // Step 4: 插入今天的新 cells
   for (const row of rows) {
     if (row.mag === '') continue;
     const anchor = `data-ck="${row.ck}"`;
@@ -585,13 +607,10 @@ function buildNewHtml() {
     h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
   }
 
-  // 插入新 today-th
-  const [mo, dy] = date.slice(5).split('-').map(Number);
-  const label     = `${mo}/${dy}`;
-  const tStart    = h.indexOf('<thead>');
-  const tEnd      = h.indexOf('</thead>');
-  const trEnd     = h.lastIndexOf('</tr>', tEnd);
-  if (trEnd < tStart) throw new Error('thead 結構異常');
+  // Step 5: 插入新的 today-th
+  const tEnd  = h.indexOf('</thead>');
+  const trEnd = h.lastIndexOf('</tr>', tEnd);
+  if (trEnd === -1) throw new Error('thead 結構異常');
   h = h.slice(0, trEnd) + `\n        <th class="today" title="${date}">${label}</th>` + h.slice(trEnd);
   return h;
 }
