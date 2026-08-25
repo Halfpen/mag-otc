@@ -573,7 +573,7 @@ function buildNewHtml() {
   for (const row of rows) {
     const marker = `data-ck="${row.ck}" title="${date} `;
     let safety = 0;
-    while (h.includes(marker) && safety++ < 5) {
+    while (h.includes(marker) && safety++ < 30) {
       const mIdx    = h.indexOf(marker);
       const tdStart = h.lastIndexOf('<td', mIdx);
       const tdEnd   = h.indexOf('</td>', mIdx) + 5;
