@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>Mag 場外指數 管理工具</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px;font-size:14px}
+h1{font-size:18px;margin-bottom:16px;color:#a78bfa}
+.card{background:#1e2130;border:1px solid #2d3250;border-radius:8px;padding:16px;margin-bottom:16px}
+.card h2{font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
+button:hover{opacity:.85}
+button:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:#7c3aed;color:#fff}
+.btn-success{background:#059669;color:#fff}
+.btn-warn{background:#d97706;color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+input[type=date],input[type=text]{background:#0f1117;border:1px solid #374151;border-radius:5px;color:#e2e8f0;padding:6px 10px;font-size:13px}
+textarea{width:100%;background:#0f1117;border:1px solid #374151;border-radius:5px;color:#e2e8f0;padding:10px;font-size:12px;font-family:monospace;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#161827;color:#94a3b8;text-align:left;padding:6px 8px;border-bottom:1px solid #2d3250;position:sticky;top:0}
+td{padding:5px 8px;border-bottom:1px solid #1a1f32}
+td input{width:100%;background:transparent;border:none;color:#e2e8f0;font-size:12px;padding:2px 0}
+td input:focus{outline:none;background:#0f1117;border-radius:3px;padding:2px 4px}
+tr:hover td{background:#232640}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600}
+.jin{background:#1e3a5f;color:#60a5fa}
+.jin-hot{background:#1e3a5f;color:#f59e0b}
+.tui-pos{background:#1a3330;color:#34d399}
+.tui-neg{background:#3b1f1f;color:#f87171}
+.kd{outline:2px solid #a78bfa}
+.kd-tp{outline:2px solid #f59e0b}
+.event-row{background:#1a1030;padding:6px 10px;border-radius:5px;margin:4px 0;font-size:12px}
+#status{padding:8px 12px;border-radius:5px;margin-top:8px;font-size:13px;display:none}
+.ok{background:#064e3b;color:#6ee7b7}
+.err{background:#7f1d1d;color:#fca5a5}
+.warn{background:#451a03;color:#fcd34d}
+.steps{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.step{padding:5px 12px;border-radius:20px;font-size:12px;background:#1e2130;color:#64748b;border:1px solid #2d3250}
+.step.active{background:#2e1065;color:#a78bfa;border-color:#7c3aed}
+.step.done{background:#064e3b;color:#6ee7b7;border-color:#059669}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.price-ok{color:#34d399}
+.price-fail{color:#f87171}
+#tbl-wrap{max-height:500px;overflow-y:auto}
+.zj-badge{background:#312e81;color:#a5b4fc;padding:1px 5px;border-radius:3px;font-size:10px}
+</style>
+</head>
+<body>
+<h1>⚡ Mag 場外指數 管理工具</h1>
+
+<div class="steps">
+  <div class="step active" id="s1">① 開啟資料夾</div>
+  <div class="step" id="s2">② 貼入數據</div>
+  <div class="step" id="s3">③ 處理 + 寫入</div>
+  <div class="step" id="s4">④ 抓取價格</div>
+  <div class="step" id="s5">⑤ 注入價格</div>
+</div>
+
+<!-- Step 1 -->
+<div class="card" id="card1">
+  <h2>① 開啟 mag-otc 資料夾</h2>
+  <p style="color:#64748b;margin-bottom:10px;font-size:12px">需要 Chrome / Edge。選擇本機的 mag-otc 資料夾（含 index.html 和 mag_data.json）</p>
+  <button class="btn-primary" onclick="openFolder()">📁 選擇資料夾</button>
+  <span id="folder-name" style="margin-left:10px;color:#64748b;font-size:12px"></span>
+</div>
+
+<!-- Step 2 -->
+<div class="card" id="card2" style="display:none">
+  <h2>② 輸入日期 + 貼入原始數據</h2>
+  <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+    <div>
+      <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">日期</label>
+      <input type="date" id="inp-date">
+    </div>
+  </div>
+  <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">原始數據（每行一個資產，包含場外指數/爆破指數/進退場期/逼近）</label>
+  <textarea id="inp-raw" rows="18" placeholder="貼入今日 Mag 報告原始數據...&#10;&#10;例：BTC 场外指数1900场外进场期第44天 爆破指数238&#10;以太坊 场外指数1872场外进场期第45天 爆破指数229&#10;三星电子 场外指数988场外进场期第2天 爆破指数91 逼近"></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+    <button class="btn-primary" onclick="parseData()">🔍 解析數據</button>
+    <span style="color:#64748b;font-size:12px">解析後可在下方表格逐行核對修改</span>
+  </div>
+</div>
+
+<!-- Step 3: Preview table -->
+<div class="card" id="card3" style="display:none">
+  <h2>③ 核對數據 → 計算 KD → 寫入</h2>
+  <div id="parse-summary" style="margin-bottom:10px;font-size:12px;color:#94a3b8"></div>
+  <div id="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:110px">資產</th>
+        <th style="width:70px">場外指數</th>
+        <th style="width:70px">爆破指數</th>
+        <th style="width:110px">期別 (進D44/退D3)</th>
+        <th style="width:50px">逼近</th>
+        <th>KD 事件（自動）</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+  </div>
+  <div style="margin-top:12px">
+    <div id="kd-summary" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-warn" onclick="recompute()">🔄 重新計算 KD</button>
+      <button class="btn-success" onclick="writeFiles()">💾 寫入 index.html + JSON</button>
+    </div>
+  </div>
+  <div id="status"></div>
+</div>
+
+<!-- Step 4: Prices -->
+<div class="card" id="card4" style="display:none">
+  <h2>④ 抓取即時價格</h2>
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <button class="btn-primary" onclick="fetchAllPrices()">📡 自動抓取（Binance + Yahoo）</button>
+    <span id="fetch-status" style="font-size:12px;color:#64748b"></span>
+  </div>
+  <div id="price-tbl-wrap">
+  <table>
+    <thead><tr><th>資產</th><th>來源</th><th style="width:130px">價格（可手動修改）</th><th>狀態</th></tr></thead>
+    <tbody id="price-body"></tbody>
+  </table>
+  </div>
+</div>
+
+<!-- Step 5: Inject -->
+<div class="card" id="card5" style="display:none">
+  <h2>⑤ 注入價格</h2>
+  <button class="btn-success" onclick="injectPrices()">💉 注入價格到 index.html</button>
+  <div id="inject-status" style="margin-top:8px;font-size:12px;color:#64748b"></div>
+  <div id="done-msg" style="display:none;margin-top:12px;padding:12px;background:#064e3b;border-radius:6px;color:#6ee7b7">
+    ✅ 完成！auto_push 將在下次偵測到變更時自動 commit + push 到 GitHub Pages。
+  </div>
+</div>
+
+<script>
+// ─── ASSET DEFINITIONS ────────────────────────────────────────────────────────
+// [ck, jsonName, display, priceSymbol, priceSource]
+// priceSource: BINANCE | KUCOIN | YAHOO | YAHOO_KRW | CN | EMPTY
+const ASSETS = [
+  ['coins|BTC',    'BTC',          'BTC',       'BTCUSDT',   'BINANCE'],
+  ['coins|ETH',    'ETH',          'ETH',       'ETHUSDT',   'BINANCE'],
+  ['coins|BNB',    'BNB',          'BNB',       'BNBUSDT',   'BINANCE'],
+  ['coins|SOL',    'SOL',          'SOL',       'SOLUSDT',   'BINANCE'],
+  ['coins|DOGE',   'DOGE',         'DOGE',      'DOGEUSDT',  'BINANCE'],
+  ['coins|LTC',    'LTC',          'LTC',       'LTCUSDT',   'BINANCE'],
+  ['coins|SUI',    'SUI',          'SUI',       'SUIUSDT',   'BINANCE'],
+  ['coins|PEPE',   'PEPE',         'PEPE',      'PEPEUSDT',  'BINANCE'],
+  ['coins|HYPE',   'HYPE',         'HYPE',      'HYPE-USDT', 'KUCOIN'],
+  ['coins|TRUMP',  'TRUMP',        'TRUMP',     'TRUMPUSDT', 'BINANCE'],
+  ['coins|PUMP',   'PUMP',         'PUMP',      'PUMPUSDT',  'BINANCE'],
+  ['coins|ZEC',    'ZEC',          'ZEC',       'ZECUSDT',   'BINANCE'],
+  ['macro|NASDAQ_OTC',     'NASDAQ_OTC',  'NASDAQ_OTC', 'QQQ',       'YAHOO'],
+  ['macro|BTC_VEGA',       'BTC_VEGA',    'BTC_VEGA',  null,        'EMPTY'],
+  ['stocks|SPCX',  'SPCX',         'SPCX',      'SPCX',      'YAHOO'],
+  ['stocks|NVDA',  'NVDA',         'NVDA',      'NVDA',      'YAHOO'],
+  ['stocks|AAPL',  'AAPL',         'AAPL',      'AAPL',      'YAHOO'],
+  ['stocks|MSFT',  'MSFT',         'MSFT',      'MSFT',      'YAHOO'],
+  ['stocks|AMZN',  'AMZN',         'AMZN',      'AMZN',      'YAHOO'],
+  ['stocks|GOOG',  'GOOG',         'GOOG',      'GOOG',      'YAHOO'],
+  ['stocks|TSLA',  'TSLA',         'TSLA',      'TSLA',      'YAHOO'],
+  ['stocks|HOOD',  'HOOD',         'HOOD',      'HOOD',      'YAHOO'],
+  ['stocks|COIN',  'COIN',         'COIN',      'COIN',      'YAHOO'],
+  ['stocks|CIRCLE','Circle',       'CIRCLE',    'CRCL',      'YAHOO'],
+  ['stocks|MU',    'MU',           'MU',        'MU',        'YAHOO'],
+  ['stocks|SNDK',  'SNDK',         'SNDK',      'SNDK',      'YAHOO'],
+  ['stocks|PLTR',  'PLTR',         'PLTR',      'PLTR',      'YAHOO'],
+  ['stocks|AAOI',  'AAOI',         'AAOI',      'AAOI',      'YAHOO'],
+  ['stocks|AXTI',  'AXTI',         'AXTI',      'AXTI',      'YAHOO'],
+  ['stocks|GLW',   'GLW',          'GLW',       'GLW',       'YAHOO'],
+  ['stocks|HYNIX', 'SKHynix',      'HYNIX',     'SKHY',      'YAHOO'],
+  ['stocks|SAMSUNG','Samsung',     'SAMSUNG',   '005930.KS', 'YAHOO_KRW'],
+  ['macro|CN_ASTOCK',      'CN_AShares',  'CN_AShares', null,       'CN'],
+  ['macro|CN_AI_ETF',      'CN_AI_ETF',   'CN_AI_ETF',  null,       'CN'],
+  ['macro|CN_ROBOT',       'CN_Robot_ETF','CN_Robot',   null,       'CN'],
+  ['macro|CN_PCB',         'CN_PCB',      'CN_PCB',     null,       'CN'],
+  ['macro|CN_MLCC',        'CN_MLCC',     'CN_MLCC',    null,       'CN'],
+  ['macro|CN_SEMICONDUCTOR','CN_Semi',    'CN_Semi',    null,       'CN'],
+  ['commodities|GOLD',     'XAU',  'GOLD',   'GC=F',  'YAHOO'],
+  ['commodities|SILVER',   'XAG',  'SILVER', 'SI=F',  'YAHOO'],
+  ['commodities|OIL',      'Brent','OIL',    'BZ=F',  'YAHOO'],
+  ['commodities|COPPER',   'Copper','COPPER','HG=F',  'YAHOO'],
+  ['commodities|PORK',     'Pork', 'PORK',  'LE=F',  'YAHOO'],
+];
+
+const CK_IDX = Object.fromEntries(ASSETS.map(([ck],i)=>[ck,i]));
+
+// Chinese name → CK lookup (longest match wins)
+const NAME_TO_CK = {
+  'BTC':'coins|BTC','比特币':'coins|BTC',
+  'ETH':'coins|ETH','以太坊':'coins|ETH',
+  'BNB':'coins|BNB',
+  'SOL':'coins|SOL','索拉纳':'coins|SOL',
+  'DOGE':'coins|DOGE','狗狗币':'coins|DOGE',
+  'LTC':'coins|LTC','莱特币':'coins|LTC',
+  'SUI':'coins|SUI',
+  'PEPE':'coins|PEPE',
+  'HYPE':'coins|HYPE',
+  'TRUMP':'coins|TRUMP',
+  'PUMP':'coins|PUMP',
+  'ZEC':'coins|ZEC',
+  'NASDAQ_OTC':'macro|NASDAQ_OTC','纳斯达克OTC':'macro|NASDAQ_OTC','纳斯达克':'macro|NASDAQ_OTC','NASDAQ':'macro|NASDAQ_OTC',
+  'BTC_VEGA':'macro|BTC_VEGA','VEGA':'macro|BTC_VEGA','比特币VEGA':'macro|BTC_VEGA',
+  'SPCX':'stocks|SPCX',
+  'NVDA':'stocks|NVDA','英伟达':'stocks|NVDA',
+  'AAPL':'stocks|AAPL','苹果':'stocks|AAPL',
+  'MSFT':'stocks|MSFT','微软':'stocks|MSFT',
+  'AMZN':'stocks|AMZN','亚马逊':'stocks|AMZN',
+  'GOOG':'stocks|GOOG','谷歌':'stocks|GOOG','GOOGLE':'stocks|GOOG',
+  'TSLA':'stocks|TSLA','特斯拉':'stocks|TSLA',
+  'HOOD':'stocks|HOOD',
+  'COIN':'stocks|COIN',
+  'CIRCLE':'stocks|CIRCLE','Circle':'stocks|CIRCLE',
+  'MU':'stocks|MU',
+  'SNDK':'stocks|SNDK',
+  'PLTR':'stocks|PLTR',
+  'AAOI':'stocks|AAOI',
+  'AXTI':'stocks|AXTI',
+  'GLW':'stocks|GLW',
+  'HYNIX':'stocks|HYNIX','SKHynix':'stocks|HYNIX','SK海力士':'stocks|HYNIX','海力士':'stocks|HYNIX',
+  'SAMSUNG':'stocks|SAMSUNG','三星电子':'stocks|SAMSUNG','三星':'stocks|SAMSUNG',
+  'CN_ASTOCK':'macro|CN_ASTOCK','A股':'macro|CN_ASTOCK','中国A股':'macro|CN_ASTOCK',
+  'CN_AI_ETF':'macro|CN_AI_ETF','AI_ETF':'macro|CN_AI_ETF',
+  'CN_ROBOT':'macro|CN_ROBOT','Robot':'macro|CN_ROBOT','机器人ETF':'macro|CN_ROBOT','机器人':'macro|CN_ROBOT',
+  'CN_PCB':'macro|CN_PCB','PCB':'macro|CN_PCB',
+  'CN_MLCC':'macro|CN_MLCC','MLCC':'macro|CN_MLCC',
+  'CN_SEMICONDUCTOR':'macro|CN_SEMICONDUCTOR','CN_Semi':'macro|CN_SEMICONDUCTOR','半导体ETF':'macro|CN_SEMICONDUCTOR','半导体':'macro|CN_SEMICONDUCTOR',
+  'GOLD':'commodities|GOLD','XAU':'commodities|GOLD','黄金':'commodities|GOLD',
+  'SILVER':'commodities|SILVER','XAG':'commodities|SILVER','白银':'commodities|SILVER',
+  'OIL':'commodities|OIL','Brent':'commodities|OIL','原油':'commodities|OIL','布伦特':'commodities|OIL',
+  'COPPER':'commodities|COPPER','Copper':'commodities|COPPER','铜':'commodities|COPPER',
+  'PORK':'commodities|PORK','Pork':'commodities|PORK','猪肉':'commodities|PORK',
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let dirHandle = null;
+let htmlContent = '';
+let jsonData = null;
+let currentDate = '';
+let parsedRows = []; // [{ck, mag, brk, period, zj, kd, jl}]
+let priceMap = {};   // ck → price string
+
+// ─── STEP 1: OPEN FOLDER ──────────────────────────────────────────────────────
+async function openFolder() {
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    document.getElementById('folder-name').textContent = '✓ ' + dirHandle.name;
+    // Read files
+    htmlContent = await readFile(dirHandle, 'index.html');
+    const jsonText = await readFile(dirHandle, '../Mag場外指數體系/mag_data.json').catch(()=>null)
+      || await readFile(dirHandle, 'mag_data.json').catch(()=>null);
+    if (!jsonText) { alert('找不到 mag_data.json'); return; }
+    jsonData = JSON.parse(jsonText);
+    // Set default date to today
+    const today = new Date();
+    document.getElementById('inp-date').value = today.toISOString().slice(0,10);
+    setStep(2);
+    document.getElementById('card2').style.display = '';
+  } catch(e) {
+    if (e.name !== 'AbortError') alert('錯誤: ' + e.message);
+  }
+}
+
+async function readFile(dir, path) {
+  const parts = path.split('/');
+  let handle = dir;
+  for (let i = 0; i < parts.length - 1; i++) {
+    handle = await handle.getDirectoryHandle(parts[i]);
+  }
+  const fh = await handle.getFileHandle(parts[parts.length-1]);
+  const file = await fh.getFile();
+  return await file.text();
+}
+
+async function writeFile(dir, filename, content) {
+  const fh = await dir.getFileHandle(filename, { create: false });
+  const writable = await fh.createWritable();
+  await writable.write(content);
+  await writable.close();
+}
+
+// ─── STEP 2: PARSE ───────────────────────────────────────────────────────────
+function findCkInLine(line) {
+  // Try longest names first
+  const names = Object.keys(NAME_TO_CK).sort((a,b) => b.length - a.length);
+  for (const name of names) {
+    if (line.includes(name)) return NAME_TO_CK[name];
+  }
+  return null;
+}
+
+function extractPeriod(line) {
+  // Handle: 进场期第44天, 退场期第3天, 场外进场期第44天, 進場期D44
+  const m = line.match(/([进進退]).*?场期第?(\d+)天/) ||
+            line.match(/([進退])場期D(\d+)/);
+  if (!m) return null;
+  const type = (m[1]==='进'||m[1]==='進') ? '進場期' : '退場期';
+  return `${type}D${m[2]}`;
+}
+
+function parseData() {
+  currentDate = document.getElementById('inp-date').value;
+  if (!currentDate) { alert('請先輸入日期'); return; }
+  const raw = document.getElementById('inp-raw').value.trim();
+  if (!raw) { alert('請貼入原始數據'); return; }
+
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const found = new Map(); // ck → row data
+
+  for (const line of lines) {
+    const ck = findCkInLine(line);
+    if (!ck) continue;
+    if (found.has(ck)) continue; // skip duplicates
+
+    const magM = line.match(/场外指数(\d+)/) || line.match(/場外指數(\d+)/);
+    const brkM = line.match(/爆破指数(-?\d+)/) || line.match(/爆破指數(-?\d+)/);
+    const period = extractPeriod(line);
+    const zj = /逼近/.test(line);
+
+    if (magM && brkM && period) {
+      found.set(ck, {
+        ck, mag: parseInt(magM[1]), brk: parseInt(brkM[1]),
+        period, zj, kd: '', jl: ''
+      });
+    }
+  }
+
+  // Build ordered rows (43 assets in canonical order)
+  parsedRows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag: '', brk: '', period: '', zj: false, kd: '', jl: '' });
+
+  const matched = parsedRows.filter(r=>r.mag!=='').length;
+  document.getElementById('parse-summary').textContent =
+    `解析到 ${matched}/43 個資產。未識別的請手動填入。`;
+
+  renderTable();
+  setStep(3);
+  document.getElementById('card3').style.display = '';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = '';
+  parsedRows.forEach((row, i) => {
+    const [ck,, disp] = ASSETS[i];
+    const tr = document.createElement('tr');
+    const cls = row.kd ? (row.kd.includes('tp') ? 'kd-tp' : 'kd') : '';
+    tr.className = cls;
+    tr.innerHTML = `
+      <td><strong>${disp}</strong></td>
+      <td><input type="text" value="${row.mag}" oninput="parsedRows[${i}].mag=+this.value||''" style="width:60px"></td>
+      <td><input type="text" value="${row.brk}" oninput="parsedRows[${i}].brk=+this.value" style="width:60px"></td>
+      <td><input type="text" value="${row.period}" oninput="parsedRows[${i}].period=normPeriod(this.value)" style="width:100px"></td>
+      <td style="text-align:center"><input type="checkbox" ${row.zj?'checked':''} onchange="parsedRows[${i}].zj=this.checked"></td>
+      <td id="kd-cell-${i}">${kdBadge(row.kd, row.jl)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function normPeriod(s) {
+  // Normalize: "進44" → "進場期D44", "退3" → "退場期D3", "進場期D44" stays
+  s = s.trim();
+  const m = s.match(/^([進進进退])(\d+)$/) || s.match(/^([JT])(\d+)$/i);
+  if (m) {
+    const t = (m[1]==='退') ? '退場期' : '進場期';
+    return `${t}D${m[2]}`;
+  }
+  return s;
+}
+
+function kdBadge(kd, jl) {
+  if (!kd) return '<span style="color:#475569">—</span>';
+  const tpStr = kd.includes('tp') ? '【止盈】' : '';
+  const jlStr = jl ? ` <span style="color:#a78bfa">${jl}</span>` : '';
+  return `<span class="badge" style="background:#2e1065;color:#a78bfa">kd-${kd}${tpStr}</span>${jlStr}`;
+}
+
+// ─── KD COMPUTATION ──────────────────────────────────────────────────────────
+function getDayNum(period) {
+  const m = period && period.match(/D(\d+)/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+function getPrevBrk(ck) {
+  const jsonName = ASSETS[CK_IDX[ck]][1];
+  const entries = (jsonData && jsonData.data) || [];
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i];
+    const assets = e.assets || e;
+    if (assets[jsonName] != null) {
+      const v = assets[jsonName];
+      return typeof v === 'object' ? v.brk : null;
+    }
+  }
+  return null;
+}
+
+function getLastKdJinMag(ck) {
+  const escaped = ck.replace('|', '\\|');
+  const pattern = new RegExp(`data-ck="${escaped}" title="([^"]+)"`, 'g');
+  let lastMag = null, prevBrk = null, m;
+  while ((m = pattern.exec(htmlContent)) !== null) {
+    const title = m[1];
+    const tm = title.match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
+    if (!tm) continue;
+    if (tm[1] >= currentDate) break;
+    const mag = parseInt(tm[2]), brk = parseInt(tm[3]), period = tm[4];
+    const isJin = period.startsWith('進場期');
+    const day = getDayNum(period);
+    if ((day===1 && isJin) || (prevBrk!==null && prevBrk>200 && brk<=200 && isJin)) lastMag = mag;
+    prevBrk = isJin ? brk : null;
+  }
+  return lastMag;
+}
+
+function getLastKdTuiMag(ck) {
+  const escaped = ck.replace('|', '\\|');
+  const pattern = new RegExp(`data-ck="${escaped}" title="([^"]+)"`, 'g');
+  let lastMag = null, prevBrk = null, m;
+  while ((m = pattern.exec(htmlContent)) !== null) {
+    const title = m[1];
+    const tm = title.match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
+    if (!tm) continue;
+    if (tm[1] >= currentDate) break;
+    const mag = parseInt(tm[2]), brk = parseInt(tm[3]), period = tm[4];
+    const isJin = period.startsWith('進場期');
+    const day = getDayNum(period);
+    if ((day===1 && !isJin) || (prevBrk!==null && prevBrk<0 && brk>=0 && !isJin)) lastMag = mag;
+    prevBrk = !isJin ? brk : null;
+  }
+  return lastMag;
+}
+
+function computeKdJl(ck, mag, brk, period) {
+  if (!period || mag==='' || brk==='') return { kd:'', jl:'' };
+  const isJin = period.startsWith('進場期');
+  const day = getDayNum(period);
+  const prevBrk = getPrevBrk(ck);
+  let kd='', jl='';
+  if (day===1) {
+    kd = isJin ? 'jin' : 'tui';
+    if (isJin) jl = brk>200 ? '劣進D1' : '優進D1';
+    else jl = brk<0 ? '劣退D1' : '優退D1';
+  } else if (prevBrk !== null) {
+    if (isJin && prevBrk>200 && brk<=200) {
+      const pkm = getLastKdJinMag(ck);
+      kd = (pkm!==null && mag<pkm) ? 'jin-tp' : 'jin';
+    } else if (!isJin && prevBrk<0 && brk>=0) {
+      const pkm = getLastKdTuiMag(ck);
+      kd = (pkm!==null && mag>pkm) ? 'tui-tp' : 'tui';
+    }
+  }
+  return { kd, jl };
+}
+
+function recompute() {
+  parsedRows.forEach((row, i) => {
+    const r = computeKdJl(row.ck, +row.mag, +row.brk, row.period);
+    parsedRows[i].kd = r.kd;
+    parsedRows[i].jl = r.jl;
+  });
+  renderTable();
+  renderKdSummary();
+}
+
+function renderKdSummary() {
+  const events = parsedRows.filter(r=>r.kd);
+  if (!events.length) { document.getElementById('kd-summary').innerHTML=''; return; }
+  let html = '<div style="margin-bottom:8px;font-size:12px;color:#94a3b8">KD 事件：</div>';
+  events.forEach(r => {
+    const [,,disp] = ASSETS[CK_IDX[r.ck]];
+    const tp = r.kd.includes('tp') ? '【止盈】' : '';
+    const jl = r.jl ? ` (${r.jl})` : '';
+    html += `<div class="event-row">• <strong>${disp}</strong> → <span style="color:#a78bfa">kd-${r.kd}${tp}</span>${jl}</div>`;
+  });
+  document.getElementById('kd-summary').innerHTML = html;
+}
+
+// ─── CELL GENERATION ─────────────────────────────────────────────────────────
+function makeCell(row) {
+  const { ck, mag, brk, period, kd, jl, zj } = row;
+  const isJin = period.startsWith('進場期');
+  let baseClass = isJin ? (brk>200 ? 'jin-hot' : 'jin') : (brk>=0 ? 'tui-pos' : 'tui-neg');
+  const zjPfx = zj ? (isJin ? 'zj-jin ' : 'zj-tui ') : '';
+  const kdSfx = kd ? ` kd-${kd}` : '';
+  const tdClass = `today-col ${zjPfx}${baseClass}${kdSfx}`;
+  const cbClass = brk>200 ? 'hot' : (brk>=0 ? 'pos' : 'neg');
+  const brkDisp = brk>0 ? `+${brk}` : String(brk);
+  const pm = period.match(/^([進退])場期(D\d+)$/);
+  const cpText = pm ? (pm[1]+pm[2]) : period;
+  const titleExtra = kd==='jin-tp' ? '【做多止盈】' : (kd==='tui-tp' ? '【做空止盈】' : '');
+  const assetKey = ck.split('|')[1];
+  const title = `${currentDate} ${assetKey}: mag=${mag}, brk=${brk}, ${period}${titleExtra}`;
+  const jlDiv = jl ? `\n          <div class="jl ${jl.startsWith('劣')?'lie':'yu'}">${jl}</div>` : '';
+  return `        <td class="${tdClass}" data-ck="${ck}" title="${title}">\n`
+       + `          <div class="cp">${cpText}</div>\n`
+       + `          <div class="cv">${mag}</div>\n`
+       + `          <div class="cb ${cbClass}">${brkDisp}</div>\n`
+       + `          <div class="pr"></div>${jlDiv}\n`
+       + `        </td>`;
+}
+
+// ─── HTML PROCESSING ─────────────────────────────────────────────────────────
+function removeTodayCol(html) {
+  return html.replace(/\btoday-col /g, '');
+}
+
+function getPrevDateFromThead(html) {
+  const m = html.match(/<th class="today" title="(\d{4}-\d{2}-\d{2})">/);
+  return m ? m[1] : null;
+}
+
+function updateThead(html, prevDate, newDate) {
+  const [m, d] = newDate.slice(5).split('-').map(Number);
+  const label = `${m}/${d}`;
+  // Demote prev
+  html = html.replace(
+    `<th class="today" title="${prevDate}">${prevDate.slice(5).replace('-','/')}`,
+    `<th title="${prevDate}">${prevDate.slice(5).replace('-','/')}`
+  );
+  // Find thead, insert before last </tr>
+  const theadStart = html.indexOf('<thead>');
+  const theadEnd = html.indexOf('</thead>');
+  const trEnd = html.lastIndexOf('</tr>', theadEnd);
+  if (trEnd < theadStart) throw new Error('thead structure error');
+  html = html.slice(0, trEnd)
+       + `\n        <th class="today" title="${newDate}">${label}</th>`
+       + html.slice(trEnd);
+  return html;
+}
+
+function insertCell(html, ck, cell) {
+  const anchor = `data-ck="${ck}"`;
+  const last = html.lastIndexOf(anchor);
+  if (last === -1) throw new Error(`Anchor not found: ${ck}`);
+  const tdClose = html.indexOf('</td>', last) + 5;
+  return html.slice(0, tdClose) + '\n' + cell + html.slice(tdClose);
+}
+
+// ─── WRITE FILES ─────────────────────────────────────────────────────────────
+async function writeFiles() {
+  if (!parsedRows.some(r=>r.mag!=='')) { showStatus('err','沒有有效數據'); return; }
+  showStatus('warn','計算 KD 事件中...');
+
+  // Auto-compute KD if not done
+  parsedRows.forEach((row,i) => {
+    if (row.mag==='' || row.brk==='' || !row.period) return;
+    const r = computeKdJl(row.ck, +row.mag, +row.brk, row.period);
+    parsedRows[i].kd = r.kd;
+    parsedRows[i].jl = r.jl;
+  });
+  renderTable();
+  renderKdSummary();
+
+  // Build new JSON assets
+  const newAssets = {};
+  parsedRows.forEach(row => {
+    if (row.mag==='') return;
+    const [,jsonName] = ASSETS[CK_IDX[row.ck]];
+    newAssets[jsonName] = { mag: +row.mag, brk: +row.brk, period: row.period, kd: row.kd, jl: row.jl };
+  });
+
+  // Process HTML
+  let html = removeTodayCol(htmlContent);
+  const prevDate = getPrevDateFromThead(html);
+  if (!prevDate) { showStatus('err','找不到 thead today-class 標記'); return; }
+
+  try {
+    // Insert cells in canonical order
+    for (const row of parsedRows) {
+      if (row.mag==='') continue;
+      const cell = makeCell(row);
+      html = insertCell(html, row.ck, cell);
+    }
+    // Update thead
+    html = updateThead(html, prevDate, currentDate);
+  } catch(e) {
+    showStatus('err', e.message); return;
+  }
+
+  // Update JSON
+  const jdata = jsonData.data || [];
+  jdata.push({ date: currentDate, assets: newAssets });
+  jsonData.data = jdata;
+  jsonData.last_updated = currentDate;
+  jsonData.total_dates = jdata.length;
+
+  // Write files
+  try {
+    await writeFile(dirHandle, 'index.html', html);
+    // Try to write JSON (may be in parent dir)
+    try {
+      const parentHandle = await dirHandle.getDirectoryHandle('..').catch(()=>null);
+      if (parentHandle) {
+        const magDir = await parentHandle.getDirectoryHandle('Mag場外指數體系').catch(()=>null);
+        if (magDir) await writeFile(magDir, 'mag_data.json', JSON.stringify(jsonData, null, 2));
+        else throw new Error('no parent');
+      } else throw new Error('no parent');
+    } catch {
+      await writeFile(dirHandle, 'mag_data.json', JSON.stringify(jsonData, null, 2));
+    }
+    htmlContent = html; // update in-memory copy for price injection
+    showStatus('ok', `✓ 寫入完成！index.html 已更新 (prev: ${prevDate} → ${currentDate}，共 ${jdata.length} 筆 JSON)`);
+    setStep(4);
+    document.getElementById('card4').style.display = '';
+    buildPriceTable();
+  } catch(e) {
+    showStatus('err', '寫入失敗: ' + e.message);
+  }
+}
+
+// ─── PRICE FETCHING ──────────────────────────────────────────────────────────
+function buildPriceTable() {
+  const tbody = document.getElementById('price-body');
+  tbody.innerHTML = '';
+  ASSETS.forEach(([ck,,disp,,src]) => {
+    const tr = document.createElement('tr');
+    let srcLabel = src;
+    let defaultVal = src==='CN' ? '---' : (src==='EMPTY' ? '' : '');
+    tr.innerHTML = `
+      <td><strong>${disp}</strong></td>
+      <td style="color:#64748b">${srcLabel}</td>
+      <td><input type="text" id="pr-${ck.replace('|','_')}" value="${defaultVal}" style="width:120px;background:#0f1117;border:1px solid #374151;border-radius:4px;color:#e2e8f0;padding:4px 8px;font-size:12px"></td>
+      <td id="ps-${ck.replace('|','_')}" style="color:#64748b;font-size:11px">—</td>`;
+    tbody.appendChild(tr);
+  });
+  // Pre-fill CN and EMPTY
+  ASSETS.forEach(([ck,,,, src]) => {
+    if (src==='CN') setPrice(ck, '---', 'CN固定');
+    if (src==='EMPTY') setPrice(ck, '', 'BTC_VEGA固定');
+  });
+}
+
+function setPrice(ck, val, statusText) {
+  const id = ck.replace('|','_');
+  const inp = document.getElementById('pr-'+id);
+  const st = document.getElementById('ps-'+id);
+  if (inp) inp.value = val;
+  if (st) { st.textContent = statusText; st.className = ''; }
+  priceMap[ck] = val;
+}
+
+function fmtPrice(p, src) {
+  if (p === null || p === undefined) return null;
+  if (src === 'YAHOO_KRW') {
+    // KRW/1000 + "k", 1 decimal place
+    const v = p / 1000;
+    return (Number.isInteger(v) ? v.toString() : v.toFixed(1)) + 'k';
+  }
+  // For very small numbers
+  if (p > 0 && p < 0.001) return p.toFixed(6);
+  if (p > 0 && p < 0.1) return p.toPrecision(4);
+  return parseFloat(p.toPrecision(6)).toString();
+}
+
+async function fetchBinance(symbol) {
+  const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+  const d = await r.json();
+  return parseFloat(d.price);
+}
+
+async function fetchKuCoin(symbol) {
+  const r = await fetch(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${symbol}`);
+  const d = await r.json();
+  return parseFloat(d.data && d.data.price);
+}
+
+async function fetchYahoo(symbol) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+  const r = await fetch(url);
+  const d = await r.json();
+  const meta = d.chart && d.chart.result && d.chart.result[0] && d.chart.result[0].meta;
+  if (!meta) throw new Error('no data');
+  return meta.regularMarketPrice || meta.previousClose;
+}
+
+async function fetchAllPrices() {
+  const btn = event.target;
+  btn.disabled = true;
+  const statusEl = document.getElementById('fetch-status');
+  statusEl.textContent = '抓取中...';
+  let ok = 0, fail = 0;
+
+  for (const [ck, , disp, sym, src] of ASSETS) {
+    const id = ck.replace('|','_');
+    const stEl = document.getElementById('ps-'+id);
+    if (src==='CN' || src==='EMPTY') { ok++; continue; }
+    stEl && (stEl.textContent = '...');
+    try {
+      let price;
+      if (src==='BINANCE') price = await fetchBinance(sym);
+      else if (src==='KUCOIN') price = await fetchKuCoin(sym);
+      else if (src==='YAHOO' || src==='YAHOO_KRW') price = await fetchYahoo(sym);
+      const fmt = fmtPrice(price, src);
+      setPrice(ck, fmt, '✓');
+      if (stEl) { stEl.textContent = '✓'; stEl.style.color='#34d399'; }
+      ok++;
+    } catch(e) {
+      if (stEl) { stEl.textContent = '✗ '+e.message.slice(0,20); stEl.style.color='#f87171'; }
+      fail++;
+    }
+    // Small delay to avoid rate limits
+    await new Promise(r => setTimeout(r, 80));
+  }
+
+  statusEl.textContent = `完成：${ok} 成功，${fail} 失敗（失敗的請手動填入）`;
+  btn.disabled = false;
+  setStep(5);
+  document.getElementById('card5').style.display = '';
+}
+
+// ─── PRICE INJECTION ─────────────────────────────────────────────────────────
+async function injectPrices() {
+  // Read prices from input fields
+  let html = htmlContent;
+  let injected = 0;
+
+  ASSETS.forEach(([ck]) => {
+    const id = ck.replace('|','_');
+    const inp = document.getElementById('pr-'+id);
+    const price = inp ? inp.value : '';
+
+    const marker = `data-ck="${ck}" title="${currentDate}`;
+    const idx = html.indexOf(marker);
+    if (idx === -1) return;
+    const tdEnd = html.indexOf('</td>', idx);
+    const seg = html.slice(idx, tdEnd);
+    const prTag = '<div class="pr"></div>';
+    const prPos = seg.indexOf(prTag);
+    if (prPos === -1) return;
+    const absPos = idx + prPos;
+    html = html.slice(0, absPos) + `<div class="pr">${price}</div>` + html.slice(absPos + prTag.length);
+    injected++;
+  });
+
+  try {
+    await writeFile(dirHandle, 'index.html', html);
+    htmlContent = html;
+    document.getElementById('inject-status').textContent = `✓ 注入 ${injected}/43 個價格`;
+    document.getElementById('done-msg').style.display = '';
+  } catch(e) {
+    document.getElementById('inject-status').textContent = '✗ 寫入失敗: ' + e.message;
+  }
+}
+
+// ─── UI HELPERS ──────────────────────────────────────────────────────────────
+function setStep(n) {
+  for (let i=1;i<=5;i++) {
+    const el = document.getElementById('s'+i);
+    if (i<n) el.className='step done';
+    else if (i===n) el.className='step active';
+    else el.className='step';
+  }
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>
