@@ -306,6 +306,7 @@ async function ghWrite(path, content, message, onProgress) {
 
 // 透過 Git Data API 讀取 index.html（繞過 raw CDN 快取）
 async function ghReadHtml() {
+  // 找 blob SHA
   const ref    = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
   const commitSha = ref.object?.sha;
   if (!commitSha) throw new Error('無法取得 ref SHA');
@@ -314,15 +315,14 @@ async function ghReadHtml() {
   const tree   = await (await ghReq(`/repos/${REPO}/git/trees/${treeSha}`)).json();
   const entry  = tree.tree?.find(e => e.path === 'index.html');
   if (!entry)  throw new Error('index.html 不在 tree 中');
-  const blobRes = await fetch(`${API}/repos/${REPO}/git/blobs/${entry.sha}`, {
-    headers: {
-      Authorization: 'Bearer ' + PAT,
-      Accept: 'application/vnd.github.raw+json',
-      'X-GitHub-Api-Version': '2022-11-28'
-    }
-  });
+  // 取 blob JSON（返回 base64 內容，不受 Accept header 歧義影響）
+  const blobRes = await ghReq(`/repos/${REPO}/git/blobs/${entry.sha}`);
   if (!blobRes.ok) throw new Error('讀取 blob 失敗 ' + blobRes.status);
-  return await blobRes.text();
+  const { content } = await blobRes.json();
+  // base64 → UTF-8（GitHub 在 content 中每 60 字元插一個換行）
+  const b64   = content.replace(/\n/g, '');
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 // ── ① 連線 ───────────────────────────────────────────────────────────────────
