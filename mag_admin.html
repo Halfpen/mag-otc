@@ -2,454 +2,445 @@
 <html lang="zh-TW">
 <head>
 <meta charset="utf-8">
-<title>Mag 場外指數 管理工具</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mag 管理工具</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px;font-size:14px}
-h1{font-size:18px;margin-bottom:16px;color:#a78bfa}
-.card{background:#1e2130;border:1px solid #2d3250;border-radius:8px;padding:16px;margin-bottom:16px}
-.card h2{font-size:13px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
-button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;padding:16px;font-size:14px;max-width:900px;margin:0 auto}
+h1{font-size:17px;margin-bottom:14px;color:#a78bfa;display:flex;align-items:center;gap:8px}
+.card{background:#1e2130;border:1px solid #2d3250;border-radius:8px;padding:14px;margin-bottom:14px}
+.card h2{font-size:12px;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s;white-space:nowrap}
 button:hover{opacity:.85}
 button:disabled{opacity:.4;cursor:not-allowed}
-.btn-primary{background:#7c3aed;color:#fff}
-.btn-success{background:#059669;color:#fff}
-.btn-warn{background:#d97706;color:#fff}
-.btn-sm{padding:4px 10px;font-size:12px}
-input[type=date],input[type=text]{background:#0f1117;border:1px solid #374151;border-radius:5px;color:#e2e8f0;padding:6px 10px;font-size:13px}
+.btn-p{background:#7c3aed;color:#fff}
+.btn-g{background:#059669;color:#fff}
+.btn-o{background:#d97706;color:#fff}
+input[type=date],input[type=text],input[type=password]{background:#0f1117;border:1px solid #374151;border-radius:5px;color:#e2e8f0;padding:7px 10px;font-size:13px;width:100%}
 textarea{width:100%;background:#0f1117;border:1px solid #374151;border-radius:5px;color:#e2e8f0;padding:10px;font-size:12px;font-family:monospace;resize:vertical}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:#161827;color:#94a3b8;text-align:left;padding:6px 8px;border-bottom:1px solid #2d3250;position:sticky;top:0}
-td{padding:5px 8px;border-bottom:1px solid #1a1f32}
-td input{width:100%;background:transparent;border:none;color:#e2e8f0;font-size:12px;padding:2px 0}
-td input:focus{outline:none;background:#0f1117;border-radius:3px;padding:2px 4px}
-tr:hover td{background:#232640}
-.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600}
-.jin{background:#1e3a5f;color:#60a5fa}
-.jin-hot{background:#1e3a5f;color:#f59e0b}
-.tui-pos{background:#1a3330;color:#34d399}
-.tui-neg{background:#3b1f1f;color:#f87171}
-.kd{outline:2px solid #a78bfa}
-.kd-tp{outline:2px solid #f59e0b}
-.event-row{background:#1a1030;padding:6px 10px;border-radius:5px;margin:4px 0;font-size:12px}
-#status{padding:8px 12px;border-radius:5px;margin-top:8px;font-size:13px;display:none}
+th{background:#161827;color:#64748b;text-align:left;padding:6px 8px;border-bottom:1px solid #2d3250;position:sticky;top:0;z-index:1}
+td{padding:5px 7px;border-bottom:1px solid #1a1f32;vertical-align:middle}
+td input[type=text]{background:transparent;border:none;color:#e2e8f0;font-size:12px;padding:2px 4px;width:100%}
+td input[type=text]:focus{background:#0f1117;border-radius:3px;outline:none}
+tr.hl td{background:#1a0f30}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:#2e1065;color:#c4b5fd}
+.steps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.step{padding:4px 11px;border-radius:20px;font-size:11px;background:#1e2130;color:#475569;border:1px solid #2d3250}
+.step.active{background:#2e1065;color:#a78bfa;border-color:#7c3aed}
+.step.done{background:#064e3b;color:#6ee7b7;border-color:#059669}
+#tbl-wrap,#price-wrap{max-height:460px;overflow-y:auto;border:1px solid #2d3250;border-radius:5px}
+.row-g{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row-g>div{flex:1;min-width:100px}
+label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
+.msg{padding:8px 12px;border-radius:5px;margin-top:10px;font-size:12px;display:none}
 .ok{background:#064e3b;color:#6ee7b7}
 .err{background:#7f1d1d;color:#fca5a5}
 .warn{background:#451a03;color:#fcd34d}
-.steps{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.step{padding:5px 12px;border-radius:20px;font-size:12px;background:#1e2130;color:#64748b;border:1px solid #2d3250}
-.step.active{background:#2e1065;color:#a78bfa;border-color:#7c3aed}
-.step.done{background:#064e3b;color:#6ee7b7;border-color:#059669}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.price-ok{color:#34d399}
-.price-fail{color:#f87171}
-#tbl-wrap{max-height:500px;overflow-y:auto}
-.zj-badge{background:#312e81;color:#a5b4fc;padding:1px 5px;border-radius:3px;font-size:10px}
+.ev{background:#1a1030;padding:6px 10px;border-radius:5px;margin:3px 0;font-size:12px}
+.done-box{background:#1a2e1a;border:1px solid #166534;border-radius:8px;padding:14px;color:#86efac;font-size:13px}
+.prog{font-size:11px;color:#64748b;margin-top:5px;min-height:16px}
+.note{font-size:11px;color:#475569;margin-top:7px;line-height:1.65}
 </style>
 </head>
 <body>
-<h1>⚡ Mag 場外指數 管理工具</h1>
+<h1>⚡ Mag 管理工具 <span style="font-size:11px;color:#475569;font-weight:400">Halfpen/mag-otc · 任何裝置可用</span></h1>
 
 <div class="steps">
-  <div class="step active" id="s1">① 開啟資料夾</div>
+  <div class="step active" id="s1">① 連線 GitHub</div>
   <div class="step" id="s2">② 貼入數據</div>
-  <div class="step" id="s3">③ 處理 + 寫入</div>
-  <div class="step" id="s4">④ 抓取價格</div>
-  <div class="step" id="s5">⑤ 注入價格</div>
+  <div class="step" id="s3">③ 核對 + 寫入</div>
+  <div class="step" id="s4">④ 價格</div>
+  <div class="step" id="s5">⑤ 完成</div>
 </div>
 
-<!-- Step 1 -->
-<div class="card" id="card1">
-  <h2>① 開啟 mag-otc 資料夾</h2>
-  <p style="color:#64748b;margin-bottom:10px;font-size:12px">需要 Chrome / Edge。選擇本機的 mag-otc 資料夾（含 index.html 和 mag_data.json）</p>
-  <button class="btn-primary" onclick="openFolder()">📁 選擇資料夾</button>
-  <span id="folder-name" style="margin-left:10px;color:#64748b;font-size:12px"></span>
-</div>
-
-<!-- Step 2 -->
-<div class="card" id="card2" style="display:none">
-  <h2>② 輸入日期 + 貼入原始數據</h2>
-  <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+<!-- ① -->
+<div class="card" id="c1">
+  <h2>① GitHub Personal Access Token</h2>
+  <div class="row-g">
     <div>
-      <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">日期</label>
-      <input type="date" id="inp-date">
+      <label>PAT（Fine-grained token，需要 Contents: Read &amp; Write）</label>
+      <input type="password" id="inp-pat" placeholder="github_pat_xxxx 或 ghp_xxxx" autocomplete="off">
     </div>
+    <div style="flex:0"><button class="btn-p" onclick="connect()" id="btn-con">連線</button></div>
   </div>
-  <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">原始數據（每行一個資產，包含場外指數/爆破指數/進退場期/逼近）</label>
-  <textarea id="inp-raw" rows="18" placeholder="貼入今日 Mag 報告原始數據...&#10;&#10;例：BTC 场外指数1900场外进场期第44天 爆破指数238&#10;以太坊 场外指数1872场外进场期第45天 爆破指数229&#10;三星电子 场外指数988场外进场期第2天 爆破指数91 逼近"></textarea>
+  <div class="note">
+    Token 只存在本裝置的 localStorage，不傳給任何第三方。可在手機/平板/任何地方使用。<br>
+    建立：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+    → Repository: mag-otc → Permissions → Contents: <b>Read and write</b>
+  </div>
+  <div id="msg1" class="msg"></div>
+</div>
+
+<!-- ② -->
+<div class="card" id="c2" style="display:none">
+  <h2>② 輸入日期 + 貼入數據</h2>
+  <div class="row-g" style="margin-bottom:10px">
+    <div style="flex:0;min-width:155px"><label>日期</label><input type="date" id="inp-date"></div>
+  </div>
+  <label>原始數據（貼入 Mag 報告文字）</label>
+  <textarea id="inp-raw" rows="14" placeholder="BTC 场外指数1900场外进场期第44天 爆破指数238&#10;以太坊 场外指数1872场外进场期第45天 爆破指数229&#10;三星电子 场外指数988场外进场期第2天 爆破指数91 逼近"></textarea>
   <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-    <button class="btn-primary" onclick="parseData()">🔍 解析數據</button>
-    <span style="color:#64748b;font-size:12px">解析後可在下方表格逐行核對修改</span>
+    <button class="btn-p" onclick="parseData()">🔍 解析</button>
+    <span id="parse-hint" style="font-size:11px;color:#475569"></span>
   </div>
 </div>
 
-<!-- Step 3: Preview table -->
-<div class="card" id="card3" style="display:none">
-  <h2>③ 核對數據 → 計算 KD → 寫入</h2>
-  <div id="parse-summary" style="margin-bottom:10px;font-size:12px;color:#94a3b8"></div>
+<!-- ③ -->
+<div class="card" id="c3" style="display:none">
+  <h2>③ 核對數據 → 計算 KD → 寫入 GitHub</h2>
   <div id="tbl-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th style="width:110px">資產</th>
-        <th style="width:70px">場外指數</th>
-        <th style="width:70px">爆破指數</th>
-        <th style="width:110px">期別 (進D44/退D3)</th>
-        <th style="width:50px">逼近</th>
-        <th>KD 事件（自動）</th>
-      </tr>
-    </thead>
-    <tbody id="tbl-body"></tbody>
-  </table>
+    <table>
+      <thead><tr>
+        <th style="width:88px">資產</th>
+        <th style="width:64px">場外指數</th>
+        <th style="width:64px">爆破指數</th>
+        <th style="width:108px">期別</th>
+        <th style="width:42px">逼近</th>
+        <th>KD 事件</th>
+      </tr></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
   </div>
-  <div style="margin-top:12px">
-    <div id="kd-summary" style="margin-bottom:10px"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-warn" onclick="recompute()">🔄 重新計算 KD</button>
-      <button class="btn-success" onclick="writeFiles()">💾 寫入 index.html + JSON</button>
-    </div>
+  <div id="kd-events" style="margin-top:10px"></div>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+    <button class="btn-o" onclick="recompute()">🔄 重算 KD</button>
+    <button class="btn-g" onclick="commitData()" id="btn-commit">💾 寫入 GitHub</button>
   </div>
-  <div id="status"></div>
+  <div id="msg3" class="msg"></div>
+  <div id="prog3" class="prog"></div>
 </div>
 
-<!-- Step 4: Prices -->
-<div class="card" id="card4" style="display:none">
-  <h2>④ 抓取即時價格</h2>
-  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-    <button class="btn-primary" onclick="fetchAllPrices()">📡 自動抓取（Binance + Yahoo）</button>
-    <span id="fetch-status" style="font-size:12px;color:#64748b"></span>
+<!-- ④ -->
+<div class="card" id="c4" style="display:none">
+  <h2>④ 抓取價格 + 注入</h2>
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+    <button class="btn-p" onclick="fetchAllPrices()" id="btn-fetch">📡 自動抓取</button>
+    <button class="btn-g" onclick="commitPrices()" id="btn-inject">💉 注入並寫入 GitHub</button>
+    <span id="fetch-msg" style="font-size:11px;color:#64748b"></span>
   </div>
-  <div id="price-tbl-wrap">
-  <table>
-    <thead><tr><th>資產</th><th>來源</th><th style="width:130px">價格（可手動修改）</th><th>狀態</th></tr></thead>
-    <tbody id="price-body"></tbody>
-  </table>
+  <div id="price-wrap">
+    <table>
+      <thead><tr><th style="width:88px">資產</th><th style="width:68px">來源</th><th style="width:140px">價格</th><th>狀態</th></tr></thead>
+      <tbody id="price-body"></tbody>
+    </table>
   </div>
+  <div id="prog4" class="prog"></div>
 </div>
 
-<!-- Step 5: Inject -->
-<div class="card" id="card5" style="display:none">
-  <h2>⑤ 注入價格</h2>
-  <button class="btn-success" onclick="injectPrices()">💉 注入價格到 index.html</button>
-  <div id="inject-status" style="margin-top:8px;font-size:12px;color:#64748b"></div>
-  <div id="done-msg" style="display:none;margin-top:12px;padding:12px;background:#064e3b;border-radius:6px;color:#6ee7b7">
-    ✅ 完成！auto_push 將在下次偵測到變更時自動 commit + push 到 GitHub Pages。
+<!-- ⑤ -->
+<div id="c5" style="display:none">
+  <div class="done-box">
+    ✅ 全部完成！GitHub Pages 通常 1-2 分鐘內更新。<br>
+    <a href="https://halfpen.github.io/mag-otc/" target="_blank" style="color:#6ee7b7;text-decoration:underline">→ 前往查看 Mag 場外指數</a>
   </div>
 </div>
 
 <script>
-// ─── ASSET DEFINITIONS ────────────────────────────────────────────────────────
-// [ck, jsonName, display, priceSymbol, priceSource]
-// priceSource: BINANCE | KUCOIN | YAHOO | YAHOO_KRW | CN | EMPTY
+// ── 常數 ─────────────────────────────────────────────────────────────────────
+const REPO   = 'Halfpen/mag-otc';
+const BRANCH = 'main';
+const API    = 'https://api.github.com';
+const RAW    = `https://raw.githubusercontent.com/${REPO}/${BRANCH}`;
+
+// ── 資產列表 [ck, jsonName, display, symbol, source] ─────────────────────────
 const ASSETS = [
-  ['coins|BTC',    'BTC',          'BTC',       'BTCUSDT',   'BINANCE'],
-  ['coins|ETH',    'ETH',          'ETH',       'ETHUSDT',   'BINANCE'],
-  ['coins|BNB',    'BNB',          'BNB',       'BNBUSDT',   'BINANCE'],
-  ['coins|SOL',    'SOL',          'SOL',       'SOLUSDT',   'BINANCE'],
-  ['coins|DOGE',   'DOGE',         'DOGE',      'DOGEUSDT',  'BINANCE'],
-  ['coins|LTC',    'LTC',          'LTC',       'LTCUSDT',   'BINANCE'],
-  ['coins|SUI',    'SUI',          'SUI',       'SUIUSDT',   'BINANCE'],
-  ['coins|PEPE',   'PEPE',         'PEPE',      'PEPEUSDT',  'BINANCE'],
-  ['coins|HYPE',   'HYPE',         'HYPE',      'HYPE-USDT', 'KUCOIN'],
-  ['coins|TRUMP',  'TRUMP',        'TRUMP',     'TRUMPUSDT', 'BINANCE'],
-  ['coins|PUMP',   'PUMP',         'PUMP',      'PUMPUSDT',  'BINANCE'],
-  ['coins|ZEC',    'ZEC',          'ZEC',       'ZECUSDT',   'BINANCE'],
-  ['macro|NASDAQ_OTC',     'NASDAQ_OTC',  'NASDAQ_OTC', 'QQQ',       'YAHOO'],
-  ['macro|BTC_VEGA',       'BTC_VEGA',    'BTC_VEGA',  null,        'EMPTY'],
-  ['stocks|SPCX',  'SPCX',         'SPCX',      'SPCX',      'YAHOO'],
-  ['stocks|NVDA',  'NVDA',         'NVDA',      'NVDA',      'YAHOO'],
-  ['stocks|AAPL',  'AAPL',         'AAPL',      'AAPL',      'YAHOO'],
-  ['stocks|MSFT',  'MSFT',         'MSFT',      'MSFT',      'YAHOO'],
-  ['stocks|AMZN',  'AMZN',         'AMZN',      'AMZN',      'YAHOO'],
-  ['stocks|GOOG',  'GOOG',         'GOOG',      'GOOG',      'YAHOO'],
-  ['stocks|TSLA',  'TSLA',         'TSLA',      'TSLA',      'YAHOO'],
-  ['stocks|HOOD',  'HOOD',         'HOOD',      'HOOD',      'YAHOO'],
-  ['stocks|COIN',  'COIN',         'COIN',      'COIN',      'YAHOO'],
-  ['stocks|CIRCLE','Circle',       'CIRCLE',    'CRCL',      'YAHOO'],
-  ['stocks|MU',    'MU',           'MU',        'MU',        'YAHOO'],
-  ['stocks|SNDK',  'SNDK',         'SNDK',      'SNDK',      'YAHOO'],
-  ['stocks|PLTR',  'PLTR',         'PLTR',      'PLTR',      'YAHOO'],
-  ['stocks|AAOI',  'AAOI',         'AAOI',      'AAOI',      'YAHOO'],
-  ['stocks|AXTI',  'AXTI',         'AXTI',      'AXTI',      'YAHOO'],
-  ['stocks|GLW',   'GLW',          'GLW',       'GLW',       'YAHOO'],
-  ['stocks|HYNIX', 'SKHynix',      'HYNIX',     'SKHY',      'YAHOO'],
-  ['stocks|SAMSUNG','Samsung',     'SAMSUNG',   '005930.KS', 'YAHOO_KRW'],
-  ['macro|CN_ASTOCK',      'CN_AShares',  'CN_AShares', null,       'CN'],
-  ['macro|CN_AI_ETF',      'CN_AI_ETF',   'CN_AI_ETF',  null,       'CN'],
-  ['macro|CN_ROBOT',       'CN_Robot_ETF','CN_Robot',   null,       'CN'],
-  ['macro|CN_PCB',         'CN_PCB',      'CN_PCB',     null,       'CN'],
-  ['macro|CN_MLCC',        'CN_MLCC',     'CN_MLCC',    null,       'CN'],
-  ['macro|CN_SEMICONDUCTOR','CN_Semi',    'CN_Semi',    null,       'CN'],
-  ['commodities|GOLD',     'XAU',  'GOLD',   'GC=F',  'YAHOO'],
-  ['commodities|SILVER',   'XAG',  'SILVER', 'SI=F',  'YAHOO'],
-  ['commodities|OIL',      'Brent','OIL',    'BZ=F',  'YAHOO'],
-  ['commodities|COPPER',   'Copper','COPPER','HG=F',  'YAHOO'],
-  ['commodities|PORK',     'Pork', 'PORK',  'LE=F',  'YAHOO'],
+  ['coins|BTC',    'BTC',         'BTC',       'BTCUSDT',   'BINANCE'],
+  ['coins|ETH',    'ETH',         'ETH',       'ETHUSDT',   'BINANCE'],
+  ['coins|BNB',    'BNB',         'BNB',       'BNBUSDT',   'BINANCE'],
+  ['coins|SOL',    'SOL',         'SOL',       'SOLUSDT',   'BINANCE'],
+  ['coins|DOGE',   'DOGE',        'DOGE',      'DOGEUSDT',  'BINANCE'],
+  ['coins|LTC',    'LTC',         'LTC',       'LTCUSDT',   'BINANCE'],
+  ['coins|SUI',    'SUI',         'SUI',       'SUIUSDT',   'BINANCE'],
+  ['coins|PEPE',   'PEPE',        'PEPE',      'PEPEUSDT',  'BINANCE'],
+  ['coins|HYPE',   'HYPE',        'HYPE',      'HYPE-USDT', 'KUCOIN'],
+  ['coins|TRUMP',  'TRUMP',       'TRUMP',     'TRUMPUSDT', 'BINANCE'],
+  ['coins|PUMP',   'PUMP',        'PUMP',      'PUMPUSDT',  'BINANCE'],
+  ['coins|ZEC',    'ZEC',         'ZEC',       'ZECUSDT',   'BINANCE'],
+  ['macro|NASDAQ_OTC',  'NASDAQ_OTC', 'NASDAQ_OTC','QQQ',   'YAHOO'],
+  ['macro|BTC_VEGA',    'BTC_VEGA',  'BTC_VEGA',  null,    'EMPTY'],
+  ['stocks|SPCX',  'SPCX',   'SPCX',   'SPCX',      'YAHOO'],
+  ['stocks|NVDA',  'NVDA',   'NVDA',   'NVDA',      'YAHOO'],
+  ['stocks|AAPL',  'AAPL',   'AAPL',   'AAPL',      'YAHOO'],
+  ['stocks|MSFT',  'MSFT',   'MSFT',   'MSFT',      'YAHOO'],
+  ['stocks|AMZN',  'AMZN',   'AMZN',   'AMZN',      'YAHOO'],
+  ['stocks|GOOG',  'GOOG',   'GOOG',   'GOOG',      'YAHOO'],
+  ['stocks|TSLA',  'TSLA',   'TSLA',   'TSLA',      'YAHOO'],
+  ['stocks|HOOD',  'HOOD',   'HOOD',   'HOOD',      'YAHOO'],
+  ['stocks|COIN',  'COIN',   'COIN',   'COIN',      'YAHOO'],
+  ['stocks|CIRCLE','Circle', 'CIRCLE', 'CRCL',      'YAHOO'],
+  ['stocks|MU',    'MU',     'MU',     'MU',        'YAHOO'],
+  ['stocks|SNDK',  'SNDK',   'SNDK',   'SNDK',      'YAHOO'],
+  ['stocks|PLTR',  'PLTR',   'PLTR',   'PLTR',      'YAHOO'],
+  ['stocks|AAOI',  'AAOI',   'AAOI',   'AAOI',      'YAHOO'],
+  ['stocks|AXTI',  'AXTI',   'AXTI',   'AXTI',      'YAHOO'],
+  ['stocks|GLW',   'GLW',    'GLW',    'GLW',       'YAHOO'],
+  ['stocks|HYNIX', 'SKHynix','HYNIX',  'SKHY',      'YAHOO'],
+  ['stocks|SAMSUNG','Samsung','SAMSUNG','005930.KS', 'YAHOO_KRW'],
+  ['macro|CN_ASTOCK',       'CN_AShares',   'CN_AShares', null,'CN'],
+  ['macro|CN_AI_ETF',       'CN_AI_ETF',    'CN_AI_ETF',  null,'CN'],
+  ['macro|CN_ROBOT',        'CN_Robot_ETF', 'CN_Robot',   null,'CN'],
+  ['macro|CN_PCB',          'CN_PCB',       'CN_PCB',     null,'CN'],
+  ['macro|CN_MLCC',         'CN_MLCC',      'CN_MLCC',    null,'CN'],
+  ['macro|CN_SEMICONDUCTOR','CN_Semi',      'CN_Semi',    null,'CN'],
+  ['commodities|GOLD',   'XAU',   'GOLD',  'GC=F', 'YAHOO'],
+  ['commodities|SILVER', 'XAG',   'SILVER','SI=F', 'YAHOO'],
+  ['commodities|OIL',    'Brent', 'OIL',   'BZ=F', 'YAHOO'],
+  ['commodities|COPPER', 'Copper','COPPER','HG=F', 'YAHOO'],
+  ['commodities|PORK',   'Pork',  'PORK',  'LE=F', 'YAHOO'],
 ];
 
-const CK_IDX = Object.fromEntries(ASSETS.map(([ck],i)=>[ck,i]));
-
-// Chinese name → CK lookup (longest match wins)
 const NAME_TO_CK = {
-  'BTC':'coins|BTC','比特币':'coins|BTC',
-  'ETH':'coins|ETH','以太坊':'coins|ETH',
+  'BTC':'coins|BTC','比特币':'coins|BTC','Bitcoin':'coins|BTC',
+  'ETH':'coins|ETH','以太坊':'coins|ETH','Ethereum':'coins|ETH',
   'BNB':'coins|BNB',
-  'SOL':'coins|SOL','索拉纳':'coins|SOL',
+  'SOL':'coins|SOL','索拉纳':'coins|SOL','Solana':'coins|SOL',
   'DOGE':'coins|DOGE','狗狗币':'coins|DOGE',
-  'LTC':'coins|LTC','莱特币':'coins|LTC',
-  'SUI':'coins|SUI',
-  'PEPE':'coins|PEPE',
-  'HYPE':'coins|HYPE',
-  'TRUMP':'coins|TRUMP',
-  'PUMP':'coins|PUMP',
-  'ZEC':'coins|ZEC',
-  'NASDAQ_OTC':'macro|NASDAQ_OTC','纳斯达克OTC':'macro|NASDAQ_OTC','纳斯达克':'macro|NASDAQ_OTC','NASDAQ':'macro|NASDAQ_OTC',
-  'BTC_VEGA':'macro|BTC_VEGA','VEGA':'macro|BTC_VEGA','比特币VEGA':'macro|BTC_VEGA',
+  'LTC':'coins|LTC','莱特币':'coins|LTC','Litecoin':'coins|LTC',
+  'SUI':'coins|SUI','PEPE':'coins|PEPE','HYPE':'coins|HYPE',
+  'TRUMP':'coins|TRUMP','PUMP':'coins|PUMP','ZEC':'coins|ZEC',
+  'NASDAQ_OTC':'macro|NASDAQ_OTC','纳斯达克OTC':'macro|NASDAQ_OTC',
+  '纳斯达克':'macro|NASDAQ_OTC','NASDAQ':'macro|NASDAQ_OTC',
+  'BTC_VEGA':'macro|BTC_VEGA','BTCVEGA':'macro|BTC_VEGA','比特币VEGA':'macro|BTC_VEGA',
   'SPCX':'stocks|SPCX',
-  'NVDA':'stocks|NVDA','英伟达':'stocks|NVDA',
-  'AAPL':'stocks|AAPL','苹果':'stocks|AAPL',
-  'MSFT':'stocks|MSFT','微软':'stocks|MSFT',
-  'AMZN':'stocks|AMZN','亚马逊':'stocks|AMZN',
-  'GOOG':'stocks|GOOG','谷歌':'stocks|GOOG','GOOGLE':'stocks|GOOG',
-  'TSLA':'stocks|TSLA','特斯拉':'stocks|TSLA',
-  'HOOD':'stocks|HOOD',
-  'COIN':'stocks|COIN',
+  'NVDA':'stocks|NVDA','英伟达':'stocks|NVDA','Nvidia':'stocks|NVDA',
+  'AAPL':'stocks|AAPL','苹果':'stocks|AAPL','Apple':'stocks|AAPL',
+  'MSFT':'stocks|MSFT','微软':'stocks|MSFT','Microsoft':'stocks|MSFT',
+  'AMZN':'stocks|AMZN','亚马逊':'stocks|AMZN','Amazon':'stocks|AMZN',
+  'GOOG':'stocks|GOOG','谷歌':'stocks|GOOG','Google':'stocks|GOOG','GOOGL':'stocks|GOOG',
+  'TSLA':'stocks|TSLA','特斯拉':'stocks|TSLA','Tesla':'stocks|TSLA',
+  'HOOD':'stocks|HOOD','Robinhood':'stocks|HOOD',
+  'COIN':'stocks|COIN','Coinbase':'stocks|COIN',
   'CIRCLE':'stocks|CIRCLE','Circle':'stocks|CIRCLE',
-  'MU':'stocks|MU',
-  'SNDK':'stocks|SNDK',
-  'PLTR':'stocks|PLTR',
-  'AAOI':'stocks|AAOI',
-  'AXTI':'stocks|AXTI',
-  'GLW':'stocks|GLW',
+  'MU':'stocks|MU','Micron':'stocks|MU',
+  'SNDK':'stocks|SNDK','SanDisk':'stocks|SNDK',
+  'PLTR':'stocks|PLTR','Palantir':'stocks|PLTR',
+  'AAOI':'stocks|AAOI','AXTI':'stocks|AXTI','GLW':'stocks|GLW','Corning':'stocks|GLW',
   'HYNIX':'stocks|HYNIX','SKHynix':'stocks|HYNIX','SK海力士':'stocks|HYNIX','海力士':'stocks|HYNIX',
-  'SAMSUNG':'stocks|SAMSUNG','三星电子':'stocks|SAMSUNG','三星':'stocks|SAMSUNG',
+  'SAMSUNG':'stocks|SAMSUNG','三星电子':'stocks|SAMSUNG','三星':'stocks|SAMSUNG','Samsung':'stocks|SAMSUNG',
   'CN_ASTOCK':'macro|CN_ASTOCK','A股':'macro|CN_ASTOCK','中国A股':'macro|CN_ASTOCK',
-  'CN_AI_ETF':'macro|CN_AI_ETF','AI_ETF':'macro|CN_AI_ETF',
-  'CN_ROBOT':'macro|CN_ROBOT','Robot':'macro|CN_ROBOT','机器人ETF':'macro|CN_ROBOT','机器人':'macro|CN_ROBOT',
+  'CN_AI_ETF':'macro|CN_AI_ETF',
+  'CN_ROBOT':'macro|CN_ROBOT','机器人ETF':'macro|CN_ROBOT','机器人':'macro|CN_ROBOT',
   'CN_PCB':'macro|CN_PCB','PCB':'macro|CN_PCB',
   'CN_MLCC':'macro|CN_MLCC','MLCC':'macro|CN_MLCC',
-  'CN_SEMICONDUCTOR':'macro|CN_SEMICONDUCTOR','CN_Semi':'macro|CN_SEMICONDUCTOR','半导体ETF':'macro|CN_SEMICONDUCTOR','半导体':'macro|CN_SEMICONDUCTOR',
+  'CN_SEMICONDUCTOR':'macro|CN_SEMICONDUCTOR','CN_Semi':'macro|CN_SEMICONDUCTOR',
+  '半导体ETF':'macro|CN_SEMICONDUCTOR','半导体':'macro|CN_SEMICONDUCTOR',
   'GOLD':'commodities|GOLD','XAU':'commodities|GOLD','黄金':'commodities|GOLD',
   'SILVER':'commodities|SILVER','XAG':'commodities|SILVER','白银':'commodities|SILVER',
-  'OIL':'commodities|OIL','Brent':'commodities|OIL','原油':'commodities|OIL','布伦特':'commodities|OIL',
-  'COPPER':'commodities|COPPER','Copper':'commodities|COPPER','铜':'commodities|COPPER',
-  'PORK':'commodities|PORK','Pork':'commodities|PORK','猪肉':'commodities|PORK',
+  'OIL':'commodities|OIL','Brent':'commodities|OIL','原油':'commodities|OIL',
+  '布伦特':'commodities|OIL','布倫特':'commodities|OIL',
+  'COPPER':'commodities|COPPER','铜':'commodities|COPPER','銅':'commodities|COPPER',
+  'PORK':'commodities|PORK','猪肉':'commodities|PORK','豬肉':'commodities|PORK',
 };
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let dirHandle = null;
-let htmlContent = '';
-let jsonData = null;
-let currentDate = '';
-let parsedRows = []; // [{ck, mag, brk, period, zj, kd, jl}]
-let priceMap = {};   // ck → price string
+// ── 狀態 ─────────────────────────────────────────────────────────────────────
+let PAT = '';
+let html = '';       // 當前 index.html 內容（記憶體）
+let date = '';       // 本次操作日期
+let rows = [];       // parsedRows
 
-// ─── STEP 1: OPEN FOLDER ──────────────────────────────────────────────────────
-async function openFolder() {
+// ── GitHub API ────────────────────────────────────────────────────────────────
+const ghReq = (path, opts = {}) =>
+  fetch(API + path, {
+    ...opts,
+    headers: {
+      Authorization: 'Bearer ' + PAT,
+      'Content-Type': 'application/json',
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(opts.headers || {})
+    }
+  });
+
+// UTF-8 → Base64（分塊避免 call-stack overflow）
+function toB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 8192)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return btoa(bin);
+}
+
+// Git Data API 寫入（支援任意大小檔案）
+async function ghWrite(path, content, message, onProgress) {
+  onProgress('取得目前 commit...');
+  const ref = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
+  const commitSha = ref.object?.sha;
+  if (!commitSha) throw new Error('無法取得 ref SHA');
+
+  onProgress('取得 tree SHA...');
+  const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
+  const treeSha = commit.tree?.sha;
+
+  onProgress('上傳 blob（檔案較大，請稍候）...');
+  const blobRes = await ghReq(`/repos/${REPO}/git/blobs`, {
+    method: 'POST',
+    body: JSON.stringify({ content: toB64(content), encoding: 'base64' })
+  });
+  if (!blobRes.ok) throw new Error('建立 blob 失敗 ' + blobRes.status);
+  const { sha: blobSha } = await blobRes.json();
+
+  onProgress('建立新 tree...');
+  const newTree = await (await ghReq(`/repos/${REPO}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: '100644', type: 'blob', sha: blobSha }] })
+  })).json();
+
+  onProgress('建立 commit...');
+  const newCommit = await (await ghReq(`/repos/${REPO}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] })
+  })).json();
+
+  onProgress('更新 branch...');
+  const upd = await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ sha: newCommit.sha })
+  });
+  if (!upd.ok) { const e = await upd.json().catch(() => ({})); throw new Error(e.message || '更新 ref 失敗'); }
+  onProgress('');
+}
+
+// ── ① 連線 ───────────────────────────────────────────────────────────────────
+async function connect() {
+  PAT = document.getElementById('inp-pat').value.trim()
+     || localStorage.getItem('mag_pat') || '';
+  if (!PAT) { showMsg('msg1', 'err', '請輸入 PAT'); return; }
+  document.getElementById('btn-con').disabled = true;
+  showMsg('msg1', 'warn', '驗證 PAT...');
   try {
-    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('folder-name').textContent = '✓ ' + dirHandle.name;
-    // Read files
-    htmlContent = await readFile(dirHandle, 'index.html');
-    const jsonText = await readFile(dirHandle, '../Mag場外指數體系/mag_data.json').catch(()=>null)
-      || await readFile(dirHandle, 'mag_data.json').catch(()=>null);
-    if (!jsonText) { alert('找不到 mag_data.json'); return; }
-    jsonData = JSON.parse(jsonText);
-    // Set default date to today
-    const today = new Date();
-    document.getElementById('inp-date').value = today.toISOString().slice(0,10);
+    const u = await ghReq('/user');
+    if (!u.ok) throw new Error('PAT 無效 (' + u.status + ')');
+    const { login } = await u.json();
+    showMsg('msg1', 'warn', '下載 index.html...');
+    const raw = await fetch(`${RAW}/index.html?_=${Date.now()}`);
+    if (!raw.ok) throw new Error('無法讀取 index.html');
+    html = await raw.text();
+    localStorage.setItem('mag_pat', PAT);
+    showMsg('msg1', 'ok', `✓ 連線成功 (${login})，index.html ${(html.length/1024).toFixed(0)} KB`);
+    document.getElementById('inp-date').value = new Date().toISOString().slice(0, 10);
     setStep(2);
-    document.getElementById('card2').style.display = '';
-  } catch(e) {
-    if (e.name !== 'AbortError') alert('錯誤: ' + e.message);
-  }
+    show('c2');
+  } catch(e) { showMsg('msg1', 'err', '❌ ' + e.message); }
+  document.getElementById('btn-con').disabled = false;
 }
 
-async function readFile(dir, path) {
-  const parts = path.split('/');
-  let handle = dir;
-  for (let i = 0; i < parts.length - 1; i++) {
-    handle = await handle.getDirectoryHandle(parts[i]);
-  }
-  const fh = await handle.getFileHandle(parts[parts.length-1]);
-  const file = await fh.getFile();
-  return await file.text();
-}
-
-async function writeFile(dir, filename, content) {
-  const fh = await dir.getFileHandle(filename, { create: false });
-  const writable = await fh.createWritable();
-  await writable.write(content);
-  await writable.close();
-}
-
-// ─── STEP 2: PARSE ───────────────────────────────────────────────────────────
-function findCkInLine(line) {
-  // Try longest names first
-  const names = Object.keys(NAME_TO_CK).sort((a,b) => b.length - a.length);
-  for (const name of names) {
-    if (line.includes(name)) return NAME_TO_CK[name];
-  }
-  return null;
+// ── ② 解析 ───────────────────────────────────────────────────────────────────
+function findCk(line) {
+  return Object.keys(NAME_TO_CK)
+    .sort((a,b) => b.length - a.length)
+    .reduce((f, n) => f || (line.includes(n) ? NAME_TO_CK[n] : null), null);
 }
 
 function extractPeriod(line) {
-  // Handle: 进场期第44天, 退场期第3天, 场外进场期第44天, 進場期D44
-  const m = line.match(/([进進退]).*?场期第?(\d+)天/) ||
-            line.match(/([進退])場期D(\d+)/);
+  const m = line.match(/([进進退]).*?场期第?(\d+)天/) || line.match(/([進退])場期D(\d+)/);
   if (!m) return null;
-  const type = (m[1]==='进'||m[1]==='進') ? '進場期' : '退場期';
-  return `${type}D${m[2]}`;
-}
-
-function parseData() {
-  currentDate = document.getElementById('inp-date').value;
-  if (!currentDate) { alert('請先輸入日期'); return; }
-  const raw = document.getElementById('inp-raw').value.trim();
-  if (!raw) { alert('請貼入原始數據'); return; }
-
-  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
-  const found = new Map(); // ck → row data
-
-  for (const line of lines) {
-    const ck = findCkInLine(line);
-    if (!ck) continue;
-    if (found.has(ck)) continue; // skip duplicates
-
-    const magM = line.match(/场外指数(\d+)/) || line.match(/場外指數(\d+)/);
-    const brkM = line.match(/爆破指数(-?\d+)/) || line.match(/爆破指數(-?\d+)/);
-    const period = extractPeriod(line);
-    const zj = /逼近/.test(line);
-
-    if (magM && brkM && period) {
-      found.set(ck, {
-        ck, mag: parseInt(magM[1]), brk: parseInt(brkM[1]),
-        period, zj, kd: '', jl: ''
-      });
-    }
-  }
-
-  // Build ordered rows (43 assets in canonical order)
-  parsedRows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag: '', brk: '', period: '', zj: false, kd: '', jl: '' });
-
-  const matched = parsedRows.filter(r=>r.mag!=='').length;
-  document.getElementById('parse-summary').textContent =
-    `解析到 ${matched}/43 個資產。未識別的請手動填入。`;
-
-  renderTable();
-  setStep(3);
-  document.getElementById('card3').style.display = '';
-}
-
-function renderTable() {
-  const tbody = document.getElementById('tbl-body');
-  tbody.innerHTML = '';
-  parsedRows.forEach((row, i) => {
-    const [ck,, disp] = ASSETS[i];
-    const tr = document.createElement('tr');
-    const cls = row.kd ? (row.kd.includes('tp') ? 'kd-tp' : 'kd') : '';
-    tr.className = cls;
-    tr.innerHTML = `
-      <td><strong>${disp}</strong></td>
-      <td><input type="text" value="${row.mag}" oninput="parsedRows[${i}].mag=+this.value||''" style="width:60px"></td>
-      <td><input type="text" value="${row.brk}" oninput="parsedRows[${i}].brk=+this.value" style="width:60px"></td>
-      <td><input type="text" value="${row.period}" oninput="parsedRows[${i}].period=normPeriod(this.value)" style="width:100px"></td>
-      <td style="text-align:center"><input type="checkbox" ${row.zj?'checked':''} onchange="parsedRows[${i}].zj=this.checked"></td>
-      <td id="kd-cell-${i}">${kdBadge(row.kd, row.jl)}</td>`;
-    tbody.appendChild(tr);
-  });
+  return ((m[1]==='进'||m[1]==='進') ? '進場期' : '退場期') + 'D' + m[2];
 }
 
 function normPeriod(s) {
-  // Normalize: "進44" → "進場期D44", "退3" → "退場期D3", "進場期D44" stays
   s = s.trim();
-  const m = s.match(/^([進進进退])(\d+)$/) || s.match(/^([JT])(\d+)$/i);
-  if (m) {
-    const t = (m[1]==='退') ? '退場期' : '進場期';
-    return `${t}D${m[2]}`;
+  const m = s.match(/^([進进退])(\d+)$/) || s.match(/^([JTjt])(\d+)$/);
+  return m ? ((m[1]==='退') ? '退場期' : '進場期') + 'D' + m[2] : s;
+}
+
+function parseData() {
+  date = document.getElementById('inp-date').value;
+  if (!date) { alert('請先輸入日期'); return; }
+  const raw = document.getElementById('inp-raw').value.trim();
+  if (!raw) { alert('請貼入數據'); return; }
+
+  const found = new Map();
+  for (const line of raw.split('\n').map(l=>l.trim()).filter(Boolean)) {
+    const ck = findCk(line);
+    if (!ck || found.has(ck)) continue;
+    const mm = line.match(/场外指数(\d+)/) || line.match(/場外指數(\d+)/);
+    const bm = line.match(/爆破指数(-?\d+)/) || line.match(/爆破指數(-?\d+)/);
+    const p  = extractPeriod(line);
+    if (mm && bm && p)
+      found.set(ck, { ck, mag:+mm[1], brk:+bm[1], period:p, zj:/逼近/.test(line), kd:'', jl:'' });
   }
-  return s;
+
+  rows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag:'', brk:'', period:'', zj:false, kd:'', jl:'' });
+  document.getElementById('parse-hint').textContent = `識別 ${rows.filter(r=>r.mag!=='').length}/43`;
+  renderTable();
+  setStep(3);
+  show('c3');
 }
 
-function kdBadge(kd, jl) {
-  if (!kd) return '<span style="color:#475569">—</span>';
-  const tpStr = kd.includes('tp') ? '【止盈】' : '';
-  const jlStr = jl ? ` <span style="color:#a78bfa">${jl}</span>` : '';
-  return `<span class="badge" style="background:#2e1065;color:#a78bfa">kd-${kd}${tpStr}</span>${jlStr}`;
+// ── ③ 表格 + KD ──────────────────────────────────────────────────────────────
+function renderTable() {
+  const tb = document.getElementById('tbl-body');
+  tb.innerHTML = '';
+  rows.forEach((row, i) => {
+    const [,, d] = ASSETS[i];
+    const tr = document.createElement('tr');
+    if (row.kd) tr.className = 'hl';
+    tr.innerHTML =
+      `<td><b>${d}</b></td>` +
+      `<td><input type="text" value="${row.mag}" oninput="rows[${i}].mag=this.value===''?'':+this.value" style="width:56px"></td>` +
+      `<td><input type="text" value="${row.brk}" oninput="rows[${i}].brk=this.value===''?'':+this.value" style="width:56px"></td>` +
+      `<td><input type="text" value="${row.period}" oninput="rows[${i}].period=normPeriod(this.value)" style="width:96px"></td>` +
+      `<td style="text-align:center"><input type="checkbox" ${row.zj?'checked':''} onchange="rows[${i}].zj=this.checked"></td>` +
+      `<td id="kc${i}">${kdHtml(row.kd, row.jl)}</td>`;
+    tb.appendChild(tr);
+  });
 }
 
-// ─── KD COMPUTATION ──────────────────────────────────────────────────────────
-function getDayNum(period) {
-  const m = period && period.match(/D(\d+)/);
-  return m ? parseInt(m[1]) : 0;
+function kdHtml(kd, jl) {
+  if (!kd) return '<span style="color:#334155">—</span>';
+  const tp = kd.includes('tp') ? '【止盈】' : '';
+  return `<span class="badge">kd-${kd}${tp}</span>` + (jl ? ` <span style="color:#a78bfa;font-size:11px">${jl}</span>` : '');
 }
 
-function getPrevBrk(ck) {
-  const jsonName = ASSETS[CK_IDX[ck]][1];
-  const entries = (jsonData && jsonData.data) || [];
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const e = entries[i];
-    const assets = e.assets || e;
-    if (assets[jsonName] != null) {
-      const v = assets[jsonName];
-      return typeof v === 'object' ? v.brk : null;
+// 從 HTML 找 prevBrk（不依賴 JSON）
+function prevBrkFromHtml(ck) {
+  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
+  let last = null, m;
+  while ((m = re.exec(html)) !== null) {
+    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=\d+, brk=(-?\d+)/);
+    if (!tm) continue;
+    if (tm[1] >= date) break;
+    last = +tm[2];
+  }
+  return last;
+}
+
+function lastKdMag(ck, forJin) {
+  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
+  let lastMag = null, prevB = null, m;
+  while ((m = re.exec(html)) !== null) {
+    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
+    if (!tm) continue;
+    if (tm[1] >= date) break;
+    const mag=+tm[2], brk=+tm[3], period=tm[4], isJin=period.startsWith('進場期'), day=getDN(period);
+    if (forJin) {
+      if ((day===1&&isJin)||(prevB!==null&&prevB>200&&brk<=200&&isJin)) lastMag=mag;
+      prevB = isJin ? brk : null;
+    } else {
+      if ((day===1&&!isJin)||(prevB!==null&&prevB<0&&brk>=0&&!isJin)) lastMag=mag;
+      prevB = !isJin ? brk : null;
     }
   }
-  return null;
-}
-
-function getLastKdJinMag(ck) {
-  const escaped = ck.replace('|', '\\|');
-  const pattern = new RegExp(`data-ck="${escaped}" title="([^"]+)"`, 'g');
-  let lastMag = null, prevBrk = null, m;
-  while ((m = pattern.exec(htmlContent)) !== null) {
-    const title = m[1];
-    const tm = title.match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
-    if (!tm) continue;
-    if (tm[1] >= currentDate) break;
-    const mag = parseInt(tm[2]), brk = parseInt(tm[3]), period = tm[4];
-    const isJin = period.startsWith('進場期');
-    const day = getDayNum(period);
-    if ((day===1 && isJin) || (prevBrk!==null && prevBrk>200 && brk<=200 && isJin)) lastMag = mag;
-    prevBrk = isJin ? brk : null;
-  }
   return lastMag;
 }
 
-function getLastKdTuiMag(ck) {
-  const escaped = ck.replace('|', '\\|');
-  const pattern = new RegExp(`data-ck="${escaped}" title="([^"]+)"`, 'g');
-  let lastMag = null, prevBrk = null, m;
-  while ((m = pattern.exec(htmlContent)) !== null) {
-    const title = m[1];
-    const tm = title.match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
-    if (!tm) continue;
-    if (tm[1] >= currentDate) break;
-    const mag = parseInt(tm[2]), brk = parseInt(tm[3]), period = tm[4];
-    const isJin = period.startsWith('進場期');
-    const day = getDayNum(period);
-    if ((day===1 && !isJin) || (prevBrk!==null && prevBrk<0 && brk>=0 && !isJin)) lastMag = mag;
-    prevBrk = !isJin ? brk : null;
-  }
-  return lastMag;
-}
+function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
 
 function computeKdJl(ck, mag, brk, period) {
   if (!period || mag==='' || brk==='') return { kd:'', jl:'' };
-  const isJin = period.startsWith('進場期');
-  const day = getDayNum(period);
-  const prevBrk = getPrevBrk(ck);
+  const isJin = period.startsWith('進場期'), day = getDN(period);
+  const pb = prevBrkFromHtml(ck);
   let kd='', jl='';
   if (day===1) {
     kd = isJin ? 'jin' : 'tui';
-    if (isJin) jl = brk>200 ? '劣進D1' : '優進D1';
-    else jl = brk<0 ? '劣退D1' : '優退D1';
-  } else if (prevBrk !== null) {
-    if (isJin && prevBrk>200 && brk<=200) {
-      const pkm = getLastKdJinMag(ck);
+    jl = isJin ? (brk>200?'劣進D1':'優進D1') : (brk<0?'劣退D1':'優退D1');
+  } else if (pb !== null) {
+    if (isJin && pb>200 && brk<=200) {
+      const pkm = lastKdMag(ck, true);
       kd = (pkm!==null && mag<pkm) ? 'jin-tp' : 'jin';
-    } else if (!isJin && prevBrk<0 && brk>=0) {
-      const pkm = getLastKdTuiMag(ck);
+    } else if (!isJin && pb<0 && brk>=0) {
+      const pkm = lastKdMag(ck, false);
       kd = (pkm!==null && mag>pkm) ? 'tui-tp' : 'tui';
     }
   }
@@ -457,311 +448,233 @@ function computeKdJl(ck, mag, brk, period) {
 }
 
 function recompute() {
-  parsedRows.forEach((row, i) => {
+  rows.forEach((row, i) => {
+    if (row.mag==='' || row.brk==='' || !row.period) return;
     const r = computeKdJl(row.ck, +row.mag, +row.brk, row.period);
-    parsedRows[i].kd = r.kd;
-    parsedRows[i].jl = r.jl;
+    rows[i].kd = r.kd; rows[i].jl = r.jl;
+    const cell = document.getElementById('kc'+i);
+    if (cell) { cell.innerHTML = kdHtml(r.kd, r.jl); cell.closest('tr').className = r.kd?'hl':''; }
   });
-  renderTable();
-  renderKdSummary();
+  renderKdEvents();
 }
 
-function renderKdSummary() {
-  const events = parsedRows.filter(r=>r.kd);
-  if (!events.length) { document.getElementById('kd-summary').innerHTML=''; return; }
-  let html = '<div style="margin-bottom:8px;font-size:12px;color:#94a3b8">KD 事件：</div>';
-  events.forEach(r => {
-    const [,,disp] = ASSETS[CK_IDX[r.ck]];
-    const tp = r.kd.includes('tp') ? '【止盈】' : '';
-    const jl = r.jl ? ` (${r.jl})` : '';
-    html += `<div class="event-row">• <strong>${disp}</strong> → <span style="color:#a78bfa">kd-${r.kd}${tp}</span>${jl}</div>`;
-  });
-  document.getElementById('kd-summary').innerHTML = html;
+function renderKdEvents() {
+  const evs = rows.filter(r=>r.kd);
+  let h = '';
+  if (evs.length) {
+    h = '<div style="font-size:11px;color:#64748b;margin-bottom:5px">KD 事件：</div>';
+    evs.forEach(r => {
+      const [,,d] = ASSETS[ASSETS.findIndex(([ck])=>ck===r.ck)];
+      h += `<div class="ev">• <b>${d}</b> → <span style="color:#c4b5fd">kd-${r.kd}${r.kd.includes('tp')?'【止盈】':''}</span>` +
+           (r.jl ? ` <span style="color:#7dd3fc">${r.jl}</span>` : '') + '</div>';
+    });
+  }
+  document.getElementById('kd-events').innerHTML = h;
 }
 
-// ─── CELL GENERATION ─────────────────────────────────────────────────────────
+// ── HTML 處理 ─────────────────────────────────────────────────────────────────
 function makeCell(row) {
   const { ck, mag, brk, period, kd, jl, zj } = row;
   const isJin = period.startsWith('進場期');
-  let baseClass = isJin ? (brk>200 ? 'jin-hot' : 'jin') : (brk>=0 ? 'tui-pos' : 'tui-neg');
-  const zjPfx = zj ? (isJin ? 'zj-jin ' : 'zj-tui ') : '';
-  const kdSfx = kd ? ` kd-${kd}` : '';
-  const tdClass = `today-col ${zjPfx}${baseClass}${kdSfx}`;
-  const cbClass = brk>200 ? 'hot' : (brk>=0 ? 'pos' : 'neg');
-  const brkDisp = brk>0 ? `+${brk}` : String(brk);
-  const pm = period.match(/^([進退])場期(D\d+)$/);
-  const cpText = pm ? (pm[1]+pm[2]) : period;
-  const titleExtra = kd==='jin-tp' ? '【做多止盈】' : (kd==='tui-tp' ? '【做空止盈】' : '');
-  const assetKey = ck.split('|')[1];
-  const title = `${currentDate} ${assetKey}: mag=${mag}, brk=${brk}, ${period}${titleExtra}`;
+  const base = isJin ? (brk>200?'jin-hot':'jin') : (brk>=0?'tui-pos':'tui-neg');
+  const zjp  = zj ? (isJin?'zj-jin ':'zj-tui ') : '';
+  const kds  = kd ? ` kd-${kd}` : '';
+  const cbCls = brk>200?'hot':(brk>=0?'pos':'neg');
+  const brkD  = brk>0?`+${brk}`:String(brk);
+  const pm    = period.match(/^([進退])場期(D\d+)$/);
+  const cp    = pm ? pm[1]+pm[2] : period;
+  const te    = kd==='jin-tp'?'【做多止盈】':(kd==='tui-tp'?'【做空止盈】':'');
+  const key   = ck.split('|')[1];
+  const title = `${date} ${key}: mag=${mag}, brk=${brk}, ${period}${te}`;
   const jlDiv = jl ? `\n          <div class="jl ${jl.startsWith('劣')?'lie':'yu'}">${jl}</div>` : '';
-  return `        <td class="${tdClass}" data-ck="${ck}" title="${title}">\n`
-       + `          <div class="cp">${cpText}</div>\n`
-       + `          <div class="cv">${mag}</div>\n`
-       + `          <div class="cb ${cbClass}">${brkDisp}</div>\n`
-       + `          <div class="pr"></div>${jlDiv}\n`
-       + `        </td>`;
+  return `        <td class="today-col ${zjp}${base}${kds}" data-ck="${ck}" title="${title}">\n` +
+         `          <div class="cp">${cp}</div>\n` +
+         `          <div class="cv">${mag}</div>\n` +
+         `          <div class="cb ${cbCls}">${brkD}</div>\n` +
+         `          <div class="pr"></div>${jlDiv}\n` +
+         `        </td>`;
 }
 
-// ─── HTML PROCESSING ─────────────────────────────────────────────────────────
-function removeTodayCol(html) {
-  return html.replace(/\btoday-col /g, '');
-}
+function buildNewHtml() {
+  let h = html.replace(/\btoday-col /g, '');
 
-function getPrevDateFromThead(html) {
-  const m = html.match(/<th class="today" title="(\d{4}-\d{2}-\d{2})">/);
-  return m ? m[1] : null;
-}
-
-function updateThead(html, prevDate, newDate) {
-  const [m, d] = newDate.slice(5).split('-').map(Number);
-  const label = `${m}/${d}`;
-  // Demote prev
-  html = html.replace(
-    `<th class="today" title="${prevDate}">${prevDate.slice(5).replace('-','/')}`,
-    `<th title="${prevDate}">${prevDate.slice(5).replace('-','/')}`
+  // 找舊 today-th
+  const pm = h.match(/<th class="today" title="(\d{4}-\d{2}-\d{2})">/);
+  if (!pm) throw new Error('找不到 thead today 標記');
+  const prevDate  = pm[1];
+  const prevLabel = prevDate.slice(5).replace('-', '/');
+  h = h.replace(
+    `<th class="today" title="${prevDate}">${prevLabel}</th>`,
+    `<th title="${prevDate}">${prevLabel}</th>`
   );
-  // Find thead, insert before last </tr>
-  const theadStart = html.indexOf('<thead>');
-  const theadEnd = html.indexOf('</thead>');
-  const trEnd = html.lastIndexOf('</tr>', theadEnd);
-  if (trEnd < theadStart) throw new Error('thead structure error');
-  html = html.slice(0, trEnd)
-       + `\n        <th class="today" title="${newDate}">${label}</th>`
-       + html.slice(trEnd);
-  return html;
+
+  // 插入 cells
+  for (const row of rows) {
+    if (row.mag === '') continue;
+    const anchor = `data-ck="${row.ck}"`;
+    const last   = h.lastIndexOf(anchor);
+    if (last === -1) throw new Error('找不到 anchor: ' + row.ck);
+    const pos = h.indexOf('</td>', last) + 5;
+    h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
+  }
+
+  // 插入新 today-th
+  const [mo, dy] = date.slice(5).split('-').map(Number);
+  const label     = `${mo}/${dy}`;
+  const tStart    = h.indexOf('<thead>');
+  const tEnd      = h.indexOf('</thead>');
+  const trEnd     = h.lastIndexOf('</tr>', tEnd);
+  if (trEnd < tStart) throw new Error('thead 結構異常');
+  h = h.slice(0, trEnd) + `\n        <th class="today" title="${date}">${label}</th>` + h.slice(trEnd);
+  return h;
 }
 
-function insertCell(html, ck, cell) {
-  const anchor = `data-ck="${ck}"`;
-  const last = html.lastIndexOf(anchor);
-  if (last === -1) throw new Error(`Anchor not found: ${ck}`);
-  const tdClose = html.indexOf('</td>', last) + 5;
-  return html.slice(0, tdClose) + '\n' + cell + html.slice(tdClose);
-}
+// ── 寫入 GitHub ── ③ ──────────────────────────────────────────────────────────
+async function commitData() {
+  const n = rows.filter(r => r.mag !== '').length;
+  if (!n) { showMsg('msg3','err','沒有有效數據'); return; }
 
-// ─── WRITE FILES ─────────────────────────────────────────────────────────────
-async function writeFiles() {
-  if (!parsedRows.some(r=>r.mag!=='')) { showStatus('err','沒有有效數據'); return; }
-  showStatus('warn','計算 KD 事件中...');
-
-  // Auto-compute KD if not done
-  parsedRows.forEach((row,i) => {
+  rows.forEach((row, i) => {
     if (row.mag==='' || row.brk==='' || !row.period) return;
     const r = computeKdJl(row.ck, +row.mag, +row.brk, row.period);
-    parsedRows[i].kd = r.kd;
-    parsedRows[i].jl = r.jl;
+    rows[i].kd = r.kd; rows[i].jl = r.jl;
   });
-  renderTable();
-  renderKdSummary();
+  renderTable(); renderKdEvents();
 
-  // Build new JSON assets
-  const newAssets = {};
-  parsedRows.forEach(row => {
-    if (row.mag==='') return;
-    const [,jsonName] = ASSETS[CK_IDX[row.ck]];
-    newAssets[jsonName] = { mag: +row.mag, brk: +row.brk, period: row.period, kd: row.kd, jl: row.jl };
-  });
-
-  // Process HTML
-  let html = removeTodayCol(htmlContent);
-  const prevDate = getPrevDateFromThead(html);
-  if (!prevDate) { showStatus('err','找不到 thead today-class 標記'); return; }
+  document.getElementById('btn-commit').disabled = true;
+  showMsg('msg3','warn',`寫入 ${n} 筆數據...`);
 
   try {
-    // Insert cells in canonical order
-    for (const row of parsedRows) {
-      if (row.mag==='') continue;
-      const cell = makeCell(row);
-      html = insertCell(html, row.ck, cell);
-    }
-    // Update thead
-    html = updateThead(html, prevDate, currentDate);
+    const newHtml = buildNewHtml();
+    await ghWrite('index.html', newHtml, `Mag data: ${date}`,
+      msg => document.getElementById('prog3').textContent = msg);
+    html = newHtml;
+    document.getElementById('prog3').textContent = '';
+    showMsg('msg3','ok',`✓ ${date} 已寫入 GitHub（${n}/43 筆）`);
+    setStep(4); show('c4'); buildPriceTable();
   } catch(e) {
-    showStatus('err', e.message); return;
+    showMsg('msg3','err','❌ '+e.message);
+    document.getElementById('prog3').textContent = '';
   }
-
-  // Update JSON
-  const jdata = jsonData.data || [];
-  jdata.push({ date: currentDate, assets: newAssets });
-  jsonData.data = jdata;
-  jsonData.last_updated = currentDate;
-  jsonData.total_dates = jdata.length;
-
-  // Write files
-  try {
-    await writeFile(dirHandle, 'index.html', html);
-    // Try to write JSON (may be in parent dir)
-    try {
-      const parentHandle = await dirHandle.getDirectoryHandle('..').catch(()=>null);
-      if (parentHandle) {
-        const magDir = await parentHandle.getDirectoryHandle('Mag場外指數體系').catch(()=>null);
-        if (magDir) await writeFile(magDir, 'mag_data.json', JSON.stringify(jsonData, null, 2));
-        else throw new Error('no parent');
-      } else throw new Error('no parent');
-    } catch {
-      await writeFile(dirHandle, 'mag_data.json', JSON.stringify(jsonData, null, 2));
-    }
-    htmlContent = html; // update in-memory copy for price injection
-    showStatus('ok', `✓ 寫入完成！index.html 已更新 (prev: ${prevDate} → ${currentDate}，共 ${jdata.length} 筆 JSON)`);
-    setStep(4);
-    document.getElementById('card4').style.display = '';
-    buildPriceTable();
-  } catch(e) {
-    showStatus('err', '寫入失敗: ' + e.message);
-  }
+  document.getElementById('btn-commit').disabled = false;
 }
 
-// ─── PRICE FETCHING ──────────────────────────────────────────────────────────
+// ── ④ 價格 ───────────────────────────────────────────────────────────────────
 function buildPriceTable() {
-  const tbody = document.getElementById('price-body');
-  tbody.innerHTML = '';
-  ASSETS.forEach(([ck,,disp,,src]) => {
-    const tr = document.createElement('tr');
-    let srcLabel = src;
-    let defaultVal = src==='CN' ? '---' : (src==='EMPTY' ? '' : '');
-    tr.innerHTML = `
-      <td><strong>${disp}</strong></td>
-      <td style="color:#64748b">${srcLabel}</td>
-      <td><input type="text" id="pr-${ck.replace('|','_')}" value="${defaultVal}" style="width:120px;background:#0f1117;border:1px solid #374151;border-radius:4px;color:#e2e8f0;padding:4px 8px;font-size:12px"></td>
-      <td id="ps-${ck.replace('|','_')}" style="color:#64748b;font-size:11px">—</td>`;
-    tbody.appendChild(tr);
+  const tb = document.getElementById('price-body');
+  tb.innerHTML = '';
+  ASSETS.forEach(([ck,, d,, src]) => {
+    const id  = ck.replace('|','_');
+    const def = src==='CN'?'---':(src==='EMPTY'?'':'');
+    const tr  = document.createElement('tr');
+    tr.innerHTML =
+      `<td><b>${d}</b></td>` +
+      `<td style="color:#475569;font-size:11px">${src}</td>` +
+      `<td><input type="text" id="pr-${id}" value="${def}" ` +
+        `style="width:128px;background:#0f1117;border:1px solid #374151;border-radius:4px;color:#e2e8f0;padding:4px 7px;font-size:12px"></td>` +
+      `<td id="ps-${id}" style="font-size:11px;color:#475569">—</td>`;
+    tb.appendChild(tr);
   });
-  // Pre-fill CN and EMPTY
-  ASSETS.forEach(([ck,,,, src]) => {
-    if (src==='CN') setPrice(ck, '---', 'CN固定');
-    if (src==='EMPTY') setPrice(ck, '', 'BTC_VEGA固定');
-  });
-}
-
-function setPrice(ck, val, statusText) {
-  const id = ck.replace('|','_');
-  const inp = document.getElementById('pr-'+id);
-  const st = document.getElementById('ps-'+id);
-  if (inp) inp.value = val;
-  if (st) { st.textContent = statusText; st.className = ''; }
-  priceMap[ck] = val;
 }
 
 function fmtPrice(p, src) {
-  if (p === null || p === undefined) return null;
-  if (src === 'YAHOO_KRW') {
-    // KRW/1000 + "k", 1 decimal place
-    const v = p / 1000;
-    return (Number.isInteger(v) ? v.toString() : v.toFixed(1)) + 'k';
-  }
-  // For very small numbers
-  if (p > 0 && p < 0.001) return p.toFixed(6);
-  if (p > 0 && p < 0.1) return p.toPrecision(4);
+  if (p === null || isNaN(p)) return null;
+  if (src==='YAHOO_KRW') { const v=p/1000; return (v===Math.floor(v)?v.toFixed(0):v.toFixed(1))+'k'; }
+  if (p>0 && p<0.0001) return p.toFixed(6);
+  if (p>0 && p<0.01)   return p.toPrecision(3);
   return parseFloat(p.toPrecision(6)).toString();
 }
 
-async function fetchBinance(symbol) {
-  const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
-  const d = await r.json();
-  return parseFloat(d.price);
-}
-
-async function fetchKuCoin(symbol) {
-  const r = await fetch(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${symbol}`);
-  const d = await r.json();
-  return parseFloat(d.data && d.data.price);
-}
-
-async function fetchYahoo(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-  const r = await fetch(url);
-  const d = await r.json();
-  const meta = d.chart && d.chart.result && d.chart.result[0] && d.chart.result[0].meta;
-  if (!meta) throw new Error('no data');
-  return meta.regularMarketPrice || meta.previousClose;
-}
-
 async function fetchAllPrices() {
-  const btn = event.target;
-  btn.disabled = true;
-  const statusEl = document.getElementById('fetch-status');
-  statusEl.textContent = '抓取中...';
-  let ok = 0, fail = 0;
+  document.getElementById('btn-fetch').disabled = true;
+  let ok=0, fail=0;
+  document.getElementById('fetch-msg').textContent = '抓取中...';
 
-  for (const [ck, , disp, sym, src] of ASSETS) {
+  for (const [ck,,, sym, src] of ASSETS) {
     const id = ck.replace('|','_');
-    const stEl = document.getElementById('ps-'+id);
+    const st = document.getElementById('ps-'+id);
     if (src==='CN' || src==='EMPTY') { ok++; continue; }
-    stEl && (stEl.textContent = '...');
+    if (st) st.textContent = '...';
     try {
       let price;
-      if (src==='BINANCE') price = await fetchBinance(sym);
-      else if (src==='KUCOIN') price = await fetchKuCoin(sym);
-      else if (src==='YAHOO' || src==='YAHOO_KRW') price = await fetchYahoo(sym);
+      if (src==='BINANCE') {
+        const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+        price = parseFloat((await r.json()).price);
+      } else if (src==='KUCOIN') {
+        const r = await fetch(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${sym}`);
+        price = parseFloat((await r.json()).data?.price);
+      } else {
+        const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`);
+        price = (await r.json()).chart?.result?.[0]?.meta?.regularMarketPrice;
+      }
       const fmt = fmtPrice(price, src);
-      setPrice(ck, fmt, '✓');
-      if (stEl) { stEl.textContent = '✓'; stEl.style.color='#34d399'; }
+      document.getElementById('pr-'+id).value = fmt || '';
+      if (st) { st.textContent='✓'; st.style.color='#34d399'; }
       ok++;
-    } catch(e) {
-      if (stEl) { stEl.textContent = '✗ '+e.message.slice(0,20); stEl.style.color='#f87171'; }
+    } catch {
+      if (st) { st.textContent='✗'; st.style.color='#f87171'; }
       fail++;
     }
-    // Small delay to avoid rate limits
     await new Promise(r => setTimeout(r, 80));
   }
-
-  statusEl.textContent = `完成：${ok} 成功，${fail} 失敗（失敗的請手動填入）`;
-  btn.disabled = false;
-  setStep(5);
-  document.getElementById('card5').style.display = '';
+  document.getElementById('fetch-msg').textContent = `${ok} 成功，${fail} 失敗`;
+  document.getElementById('btn-fetch').disabled = false;
 }
 
-// ─── PRICE INJECTION ─────────────────────────────────────────────────────────
-async function injectPrices() {
-  // Read prices from input fields
-  let html = htmlContent;
-  let injected = 0;
+async function commitPrices() {
+  document.getElementById('btn-inject').disabled = true;
+  const PR = '<div class="pr"></div>';
+  let h = html, injected = 0;
 
   ASSETS.forEach(([ck]) => {
-    const id = ck.replace('|','_');
-    const inp = document.getElementById('pr-'+id);
-    const price = inp ? inp.value : '';
-
-    const marker = `data-ck="${ck}" title="${currentDate}`;
-    const idx = html.indexOf(marker);
-    if (idx === -1) return;
-    const tdEnd = html.indexOf('</td>', idx);
-    const seg = html.slice(idx, tdEnd);
-    const prTag = '<div class="pr"></div>';
-    const prPos = seg.indexOf(prTag);
-    if (prPos === -1) return;
-    const absPos = idx + prPos;
-    html = html.slice(0, absPos) + `<div class="pr">${price}</div>` + html.slice(absPos + prTag.length);
+    const id  = ck.replace('|','_');
+    const val = document.getElementById('pr-'+id)?.value ?? '';
+    const marker = `data-ck="${ck}" title="${date}`;
+    const idx    = h.indexOf(marker);
+    if (idx===-1) return;
+    const tdEnd = h.indexOf('</td>', idx);
+    const seg   = h.slice(idx, tdEnd);
+    const prPos = seg.indexOf(PR);
+    if (prPos===-1) return;
+    const abs = idx + prPos;
+    h = h.slice(0, abs) + `<div class="pr">${val}</div>` + h.slice(abs + PR.length);
     injected++;
   });
 
   try {
-    await writeFile(dirHandle, 'index.html', html);
-    htmlContent = html;
-    document.getElementById('inject-status').textContent = `✓ 注入 ${injected}/43 個價格`;
-    document.getElementById('done-msg').style.display = '';
+    await ghWrite('index.html', h, `Mag prices: ${date}`,
+      msg => document.getElementById('prog4').textContent = msg);
+    html = h;
+    document.getElementById('prog4').textContent = '';
+    document.getElementById('fetch-msg').textContent = `✓ 注入 ${injected}/43 並寫入 GitHub`;
+    setStep(5); show('c5');
   } catch(e) {
-    document.getElementById('inject-status').textContent = '✗ 寫入失敗: ' + e.message;
+    document.getElementById('prog4').textContent = '';
+    document.getElementById('fetch-msg').textContent = '❌ '+e.message;
   }
+  document.getElementById('btn-inject').disabled = false;
 }
 
-// ─── UI HELPERS ──────────────────────────────────────────────────────────────
+// ── UI ────────────────────────────────────────────────────────────────────────
 function setStep(n) {
-  for (let i=1;i<=5;i++) {
+  [1,2,3,4,5].forEach(i => {
     const el = document.getElementById('s'+i);
-    if (i<n) el.className='step done';
-    else if (i===n) el.className='step active';
-    else el.className='step';
-  }
+    if (el) el.className = 'step' + (i<n?' done':i===n?' active':'');
+  });
 }
-
-function showStatus(type, msg) {
-  const el = document.getElementById('status');
-  el.className = type;
-  el.textContent = msg;
+function show(id) { document.getElementById(id).style.display = ''; }
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'msg ' + type;
+  el.textContent = text;
   el.style.display = 'block';
 }
+
+window.addEventListener('load', () => {
+  const p = localStorage.getItem('mag_pat');
+  if (p) document.getElementById('inp-pat').value = p;
+});
 </script>
 </body>
 </html>
