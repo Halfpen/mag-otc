@@ -538,7 +538,47 @@ function makeCell(row) {
 function buildNewHtml() {
   let h = html.replace(/\btoday-col /g, '');
 
-  // 找舊 today-th
+  const [mo, dy] = date.slice(5).split('-').map(Number);
+  const label = `${mo}/${dy}`;
+
+  // 偵測是否已有這天的數據（覆蓋模式）
+  const overwrite = h.includes(`title="${date} `);
+
+  if (overwrite) {
+    // ── 覆蓋模式 ─────────────────────────────────────────────────────────────
+    // 1. 刪除所有既有同日期 cells（含重複）
+    for (const row of rows) {
+      const marker = `data-ck="${row.ck}" title="${date} `;
+      let safety = 0;
+      while (h.includes(marker) && safety++ < 5) {
+        const mIdx    = h.indexOf(marker);
+        const tdStart = h.lastIndexOf('<td', mIdx);
+        const tdEnd   = h.indexOf('</td>', mIdx) + 5;
+        const start   = (tdStart > 0 && h[tdStart-1] === '\n') ? tdStart-1 : tdStart;
+        h = h.slice(0, start) + h.slice(tdEnd);
+      }
+    }
+    // 2. 修復 thead：刪除所有此日期的 th，重新插入一個正確的
+    const thPlain = `<th title="${date}">${label}</th>`;
+    const thToday = `<th class="today" title="${date}">${label}</th>`;
+    while (h.includes(thPlain)) h = h.replace(thPlain, '');
+    while (h.includes(thToday)) h = h.replace(thToday, '');
+    const tEnd1 = h.indexOf('</thead>');
+    const trEnd1 = h.lastIndexOf('</tr>', tEnd1);
+    h = h.slice(0, trEnd1) + `\n        <th class="today" title="${date}">${label}</th>` + h.slice(trEnd1);
+    // 3. 重新插入新 cells
+    for (const row of rows) {
+      if (row.mag === '') continue;
+      const anchor = `data-ck="${row.ck}"`;
+      const last   = h.lastIndexOf(anchor);
+      if (last === -1) throw new Error('找不到 anchor: ' + row.ck);
+      const pos = h.indexOf('</td>', last) + 5;
+      h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
+    }
+    return h;
+  }
+
+  // ── 插入模式（新日期）────────────────────────────────────────────────────
   const pm = h.match(/<th class="today" title="(\d{4}-\d{2}-\d{2})">/);
   if (!pm) throw new Error('找不到 thead today 標記');
   const prevDate  = pm[1];
@@ -548,7 +588,6 @@ function buildNewHtml() {
     `<th title="${prevDate}">${prevLabel}</th>`
   );
 
-  // 插入 cells
   for (const row of rows) {
     if (row.mag === '') continue;
     const anchor = `data-ck="${row.ck}"`;
@@ -558,12 +597,9 @@ function buildNewHtml() {
     h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
   }
 
-  // 插入新 today-th
-  const [mo, dy] = date.slice(5).split('-').map(Number);
-  const label     = `${mo}/${dy}`;
-  const tStart    = h.indexOf('<thead>');
-  const tEnd      = h.indexOf('</thead>');
-  const trEnd     = h.lastIndexOf('</tr>', tEnd);
+  const tStart = h.indexOf('<thead>');
+  const tEnd   = h.indexOf('</thead>');
+  const trEnd  = h.lastIndexOf('</tr>', tEnd);
   if (trEnd < tStart) throw new Error('thead 結構異常');
   h = h.slice(0, trEnd) + `\n        <th class="today" title="${date}">${label}</th>` + h.slice(trEnd);
   return h;
@@ -582,7 +618,10 @@ async function commitData() {
   renderTable(); renderKdEvents();
 
   document.getElementById('btn-commit').disabled = true;
-  showMsg('msg3','warn',`寫入 ${n} 筆數據...`);
+  const isOverwrite = html.includes(`title="${date} `);
+  showMsg('msg3','warn', isOverwrite
+    ? `⚠️ 偵測到 ${date} 已有數據，覆蓋模式寫入 ${n} 筆...`
+    : `寫入 ${n} 筆數據...`);
 
   try {
     const newHtml = buildNewHtml();
