@@ -327,9 +327,10 @@ async function connect() {
 
 // ── ② 解析 ───────────────────────────────────────────────────────────────────
 function findCk(line) {
+  const upper = line.toUpperCase();
   return Object.keys(NAME_TO_CK)
-    .sort((a,b) => b.length - a.length)
-    .reduce((f, n) => f || (line.includes(n) ? NAME_TO_CK[n] : null), null);
+    .sort((a, b) => b.length - a.length)
+    .reduce((f, n) => f || (upper.includes(n.toUpperCase()) ? NAME_TO_CK[n] : null), null);
 }
 
 function extractPeriod(line) {
