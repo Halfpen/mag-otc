@@ -483,25 +483,53 @@ function lastKdMag(ck, forJin) {
 
 function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
 
+// 缺席D1偵測：掃描歷史 cells，若目前期間從未出現D1 → 回傳 false
+function d1ExistsForCurrentPeriod(ck, isJin) {
+  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
+  let foundD1 = false, m;
+  while ((m = re.exec(html)) !== null) {
+    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=\d+, brk=-?\d+, ([^\s,\[【]+)/);
+    if (!tm) continue;
+    if (tm[1] >= date) break;
+    const cellIsJin = tm[2].startsWith('進場期');
+    if (cellIsJin === isJin) {
+      if (getDN(tm[2]) === 1) foundD1 = true;
+    } else {
+      foundD1 = false; // 期間類型切換，重置
+    }
+  }
+  return foundD1;
+}
+
 function computeKdJl(ck, mag, brk, period) {
   if (!period || mag==='' || brk==='') return { kd:'', jl:'' };
   const isJin = period.startsWith('進場期'), day = getDN(period);
   const pb = prevBrkFromHtml(ck);
   let kd='', jl='';
   if (day===1) {
+    // 正常D1
     kd = isJin ? 'jin' : 'tui';
     if (isJin) {
-      // 進場期D1：brk>200 直接劣進
       jl = brk > 200 ? '劣進D1' : '優進D1';
     } else {
-      // 退場期D1：
-      // 1. brk<0 → 直接劣退
-      // 2. brk≥0 → 比較 mag 與上次退場期關鍵節點
       if (brk < 0) {
         jl = '劣退D1';
       } else {
         const pkm = lastKdMag(ck, false);
         jl = (pkm !== null && mag > pkm) ? '劣退D1' : '優退D1';
+      }
+    }
+  } else if (!d1ExistsForCurrentPeriod(ck, isJin)) {
+    // 缺席D1規則：D1未提交，以此天作等效D1（不設tp，標記實際天數）
+    kd = isJin ? 'jin' : 'tui';
+    if (isJin) {
+      jl = brk > 200 ? `劣進D${day}` : `優進D${day}`;
+    } else {
+      if (brk < 0) {
+        jl = `劣退D${day}`;
+      } else {
+        const pkm = lastKdMag(ck, false);
+        jl = (pkm !== null && mag > pkm) ? `劣退D${day}` : `優退D${day}`;
       }
     }
   } else if (pb !== null) {
