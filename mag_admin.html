@@ -345,8 +345,8 @@ async function connect() {
     date = today;  // 設定全域 date，讓④可以直接使用
     // 偵測今天是否已有數據
     if (html.includes(`title="${today} `)) {
-      showMsg('msg1', 'ok', `✓ 連線成功 (${login})，${sz} KB ｜ ⚠️ ${today} 已有數據，直接執行④`);
-      setStep(4); show('c4'); buildPriceTable();
+      showMsg('msg1', 'ok', `✓ 連線成功 (${login})，${sz} KB ｜ ⚠️ ${today} 已有數據 → 可直接執行④，或重新跑②③覆蓋`);
+      setStep(4); show('c2'); show('c3'); show('c4'); buildPriceTable();
     } else {
       showMsg('msg1', 'ok', `✓ 連線成功 (${login})，index.html ${sz} KB`);
       setStep(2); show('c2');
