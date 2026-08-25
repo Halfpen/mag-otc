@@ -641,8 +641,8 @@ async function fetchAllPrices() {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
         price = parseFloat((await r.json()).price);
       } else if (src==='KUCOIN') {
-        // KuCoin stats endpoint (CORS-friendly)
-        const r = await fetch(`https://api.kucoin.com/api/v1/market/stats?symbol=${sym}`);
+        const kcUrl = `https://api.kucoin.com/api/v1/market/stats?symbol=${sym}`;
+        const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(kcUrl)}`);
         price = parseFloat((await r.json()).data?.last);
       } else {
         // Yahoo Finance — wrap with CORS proxy to bypass browser restrictions
