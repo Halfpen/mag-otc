@@ -155,7 +155,7 @@ const ASSETS = [
   ['coins|LTC',    'LTC',         'LTC',       'LTCUSDT',   'BINANCE'],
   ['coins|SUI',    'SUI',         'SUI',       'SUIUSDT',   'BINANCE'],
   ['coins|PEPE',   'PEPE',        'PEPE',      'PEPEUSDT',  'BINANCE'],
-  ['coins|HYPE',   'HYPE',        'HYPE',      'HYPE-USDT', 'KUCOIN'],
+  ['coins|HYPE',   'HYPE',        'HYPE',      'HYPEUSDT',  'BYBIT'],
   ['coins|TRUMP',  'TRUMP',       'TRUMP',     'TRUMPUSDT', 'BINANCE'],
   ['coins|PUMP',   'PUMP',        'PUMP',      'PUMPUSDT',  'BINANCE'],
   ['coins|ZEC',    'ZEC',         'ZEC',       'ZECUSDT',   'BINANCE'],
@@ -688,6 +688,10 @@ async function fetchAllPrices() {
       if (src==='BINANCE') {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
         price = parseFloat((await r.json()).price);
+      } else if (src==='BYBIT') {
+        const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${sym}`);
+        const d = await r.json();
+        price = parseFloat(d.result?.list?.[0]?.lastPrice);
       } else if (src==='KUCOIN') {
         const kcUrl = `https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${sym}`;
         const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(kcUrl)}`);
