@@ -483,22 +483,18 @@ function lastKdMag(ck, forJin) {
 
 function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
 
-// 缺席D1偵測：掃描歷史 cells，若目前期間從未出現D1 → 回傳 false
+// 缺席D1偵測：只看最近一個 cell 的期間方向
+// 若與今天相同 → D1 早已提交；若不同 → 期間剛切換，D1 可能缺席
 function d1ExistsForCurrentPeriod(ck, isJin) {
   const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
-  let foundD1 = false, m;
+  let lastIsJin = null, m;
   while ((m = re.exec(html)) !== null) {
     const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=\d+, brk=-?\d+, ([^\s,\[【]+)/);
     if (!tm) continue;
     if (tm[1] >= date) break;
-    const cellIsJin = tm[2].startsWith('進場期');
-    if (cellIsJin === isJin) {
-      if (getDN(tm[2]) === 1) foundD1 = true;
-    } else {
-      foundD1 = false; // 期間類型切換，重置
-    }
+    lastIsJin = tm[2].startsWith('進場期');
   }
-  return foundD1;
+  return lastIsJin === isJin;
 }
 
 function computeKdJl(ck, mag, brk, period) {
