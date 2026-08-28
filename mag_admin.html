@@ -159,25 +159,25 @@ const ASSETS = [
   ['coins|TRUMP',  'TRUMP',       'TRUMP',     'TRUMPUSDT', 'BINANCE'],
   ['coins|PUMP',   'PUMP',        'PUMP',      'PUMPUSDT',  'BINANCE'],
   ['coins|ZEC',    'ZEC',         'ZEC',       'ZECUSDT',   'BINANCE'],
-  ['macro|NASDAQ_OTC',  'NASDAQ_OTC', 'NASDAQ_OTC','QQQ',   'YAHOO'],
-  ['macro|BTC_VEGA',    'BTC_VEGA',  'BTC_VEGA',  null,    'EMPTY'],
-  ['stocks|SPCX',  'SPCX',   'SPCX',   'SPCX',      'YAHOO'],
-  ['stocks|NVDA',  'NVDA',   'NVDA',   'NVDA',      'YAHOO'],
-  ['stocks|AAPL',  'AAPL',   'AAPL',   'AAPL',      'YAHOO'],
-  ['stocks|MSFT',  'MSFT',   'MSFT',   'MSFT',      'YAHOO'],
-  ['stocks|AMZN',  'AMZN',   'AMZN',   'AMZN',      'YAHOO'],
-  ['stocks|GOOG',  'GOOG',   'GOOG',   'GOOG',      'YAHOO'],
-  ['stocks|TSLA',  'TSLA',   'TSLA',   'TSLA',      'YAHOO'],
-  ['stocks|HOOD',  'HOOD',   'HOOD',   'HOOD',      'YAHOO'],
-  ['stocks|COIN',  'COIN',   'COIN',   'COIN',      'YAHOO'],
-  ['stocks|CIRCLE','Circle', 'CIRCLE', 'CRCL',      'YAHOO'],
-  ['stocks|MU',    'MU',     'MU',     'MU',        'YAHOO'],
-  ['stocks|SNDK',  'SNDK',   'SNDK',   'SNDK',      'YAHOO'],
-  ['stocks|PLTR',  'PLTR',   'PLTR',   'PLTR',      'YAHOO'],
-  ['stocks|AAOI',  'AAOI',   'AAOI',   'AAOI',      'YAHOO'],
-  ['stocks|AXTI',  'AXTI',   'AXTI',   'AXTI',      'YAHOO'],
-  ['stocks|GLW',   'GLW',    'GLW',    'GLW',       'YAHOO'],
-  ['stocks|HYNIX', 'SKHynix','HYNIX',  'SKHY',      'YAHOO'],
+  ['macro|NASDAQ_OTC',  'NASDAQ_OTC', 'NASDAQ_OTC','QQQUSDT',   'BYBIT_LINEAR'],
+  ['macro|BTC_VEGA',    'BTC_VEGA',  'BTC_VEGA',  null,        'EMPTY'],
+  ['stocks|SPCX',  'SPCX',   'SPCX',   'SPCXUSDT',  'BYBIT_LINEAR'],
+  ['stocks|NVDA',  'NVDA',   'NVDA',   'NVDAUSDT',  'BYBIT_LINEAR'],
+  ['stocks|AAPL',  'AAPL',   'AAPL',   'AAPLUSDT',  'BYBIT_LINEAR'],
+  ['stocks|MSFT',  'MSFT',   'MSFT',   'MSFTUSDT',  'BYBIT_LINEAR'],
+  ['stocks|AMZN',  'AMZN',   'AMZN',   'AMZNUSDT',  'BYBIT_LINEAR'],
+  ['stocks|GOOG',  'GOOG',   'GOOG',   'GOOGLUSDT', 'BYBIT_LINEAR'],
+  ['stocks|TSLA',  'TSLA',   'TSLA',   'TSLAUSDT',  'BYBIT_LINEAR'],
+  ['stocks|HOOD',  'HOOD',   'HOOD',   'HOODUSDT',  'BYBIT_LINEAR'],
+  ['stocks|COIN',  'COIN',   'COIN',   'COINUSDT',  'BYBIT_LINEAR'],
+  ['stocks|CIRCLE','Circle', 'CIRCLE', 'CRCLUSDT',  'BYBIT_LINEAR'],
+  ['stocks|MU',    'MU',     'MU',     'MUUSDT',    'BYBIT_LINEAR'],
+  ['stocks|SNDK',  'SNDK',   'SNDK',   'SNDKUSDT',  'BYBIT_LINEAR'],
+  ['stocks|PLTR',  'PLTR',   'PLTR',   'PLTRUSDT',  'BYBIT_LINEAR'],
+  ['stocks|AAOI',  'AAOI',   'AAOI',   'AAOIUSDT',  'BYBIT_LINEAR'],
+  ['stocks|AXTI',  'AXTI',   'AXTI',   'AXTIUSDT',  'BYBIT_LINEAR'],
+  ['stocks|GLW',   'GLW',    'GLW',    'GLWUSDT',   'BYBIT_LINEAR'],
+  ['stocks|HYNIX', 'SKHynix','HYNIX',  'SKHYUSDT',  'BYBIT_LINEAR'],
   ['stocks|SAMSUNG','Samsung','SAMSUNG','005930.KS', 'YAHOO_KRW'],
   ['macro|CN_ASTOCK',       'CN_AShares',   'CN_AShares', null,'CN'],
   ['macro|CN_AI_ETF',       'CN_AI_ETF',    'CN_AI_ETF',  null,'CN'],
@@ -185,11 +185,11 @@ const ASSETS = [
   ['macro|CN_PCB',          'CN_PCB',       'CN_PCB',     null,'CN'],
   ['macro|CN_MLCC',         'CN_MLCC',      'CN_MLCC',    null,'CN'],
   ['macro|CN_SEMICONDUCTOR','CN_Semi',      'CN_Semi',    null,'CN'],
-  ['commodities|GOLD',   'XAU',   'GOLD',  'GC=F', 'YAHOO'],
-  ['commodities|SILVER', 'XAG',   'SILVER','SI=F', 'YAHOO'],
-  ['commodities|OIL',    'Brent', 'OIL',   'BZ=F', 'YAHOO'],
-  ['commodities|COPPER', 'Copper','COPPER','HG=F', 'YAHOO'],
-  ['commodities|PORK',   'Pork',  'PORK',  'LE=F', 'YAHOO'],
+  ['commodities|GOLD',   'XAU',   'GOLD',  'XAUUSDT', 'BYBIT_LINEAR'],
+  ['commodities|SILVER', 'XAG',   'SILVER','XAGUSDT', 'BYBIT_LINEAR'],
+  ['commodities|OIL',    'Brent', 'OIL',   'BZ=F',    'YAHOO'],
+  ['commodities|COPPER', 'Copper','COPPER','HG=F',    'YAHOO'],
+  ['commodities|PORK',   'Pork',  'PORK',  'LE=F',    'YAHOO'],
 ];
 
 const NAME_TO_CK = {
@@ -714,6 +714,10 @@ async function fetchAllPrices() {
         price = parseFloat((await r.json()).price);
       } else if (src==='BYBIT') {
         const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${sym}`);
+        const d = await r.json();
+        price = parseFloat(d.result?.list?.[0]?.lastPrice);
+      } else if (src==='BYBIT_LINEAR') {
+        const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${sym}`);
         const d = await r.json();
         price = parseFloat(d.result?.list?.[0]?.lastPrice);
       } else if (src==='KUCOIN') {
