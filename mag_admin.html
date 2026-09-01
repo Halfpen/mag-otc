@@ -449,97 +449,103 @@ function kdHtml(kd, jl) {
   return `<span class="badge">kd-${kd}${tp}</span>` + (jl ? ` <span style="color:#a78bfa;font-size:11px">${jl}</span>` : '');
 }
 
-// 從 HTML 找 prevBrk（不依賴 JSON）
-function prevBrkFromHtml(ck) {
-  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
-  let last = null, m;
+function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
+
+// 從 title 屬性掃描所有歷史 cells（含無 data-ck 的舊格）
+function getCellHistory(ck) {
+  const ticker = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${ticker}: mag=(-?[\\d.]+), brk=(-?[\\d.]+), ([^"【]+)"`, 'g');
+  const cells = [];
+  let m;
   while ((m = re.exec(html)) !== null) {
-    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=\d+, brk=(-?\d+)/);
-    if (!tm) continue;
-    if (tm[1] >= date) break;
-    last = +tm[2];
+    if (m[1] >= date) break;
+    cells.push({ date: m[1], mag: +m[2], brk: +m[3], period: m[4].trim() });
   }
-  return last;
+  return cells;
 }
 
-function lastKdMag(ck, forJin) {
-  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
-  let lastMag = null, prevB = null, m;
-  while ((m = re.exec(html)) !== null) {
-    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=(\d+), brk=(-?\d+), ([^\s,\[【]+)/);
-    if (!tm) continue;
-    if (tm[1] >= date) break;
-    const mag=+tm[2], brk=+tm[3], period=tm[4], isJin=period.startsWith('進場期'), day=getDN(period);
-    if (forJin) {
-      if ((day===1&&isJin)||(prevB!==null&&prevB>200&&brk<=200&&isJin)) lastMag=mag;
-      prevB = isJin ? brk : null;
-    } else {
-      if ((day===1&&!isJin)||(prevB!==null&&prevB<0&&brk>=0&&!isJin)) lastMag=mag;
-      prevB = !isJin ? brk : null;
+// 獲取 D1 的比較參考 mag：
+// 進D1 → 最近的「進場期KD」與「退場期brk>200→≤200當天」取時間更近者
+// 退D1 → 最近的「退場期KD」與「進場期brk<0→≥0當天」取時間更近者
+function getD1RefMag(ck, isJin) {
+  const cells = getCellHistory(ck);
+  let lastJinKd=null, lastTuiKd=null, lastTuiDrop200=null, lastJinNegPos=null, prevB=null;
+  for (const c of cells) {
+    const cJin = c.period.startsWith('進場期'), day = getDN(c.period);
+    if (day === 1) {
+      if (cJin) lastJinKd = { date:c.date, mag:c.mag };
+      else lastTuiKd = { date:c.date, mag:c.mag };
+    } else if (prevB !== null) {
+      if (cJin && prevB>200 && c.brk<=200)  lastJinKd      = { date:c.date, mag:c.mag };
+      else if (!cJin && prevB<0 && c.brk>=0) lastTuiKd     = { date:c.date, mag:c.mag };
+      else if (!cJin && prevB>200 && c.brk<=200) lastTuiDrop200 = { date:c.date, mag:c.mag };
+      else if (cJin && prevB<0 && c.brk>=0)  lastJinNegPos  = { date:c.date, mag:c.mag };
     }
+    prevB = c.brk;
+  }
+  const pick = (a, b) => {
+    if (!a && !b) return null;
+    if (!a) return b.mag; if (!b) return a.mag;
+    return a.date > b.date ? a.mag : b.mag;
+  };
+  return isJin ? pick(lastJinKd, lastTuiDrop200) : pick(lastTuiKd, lastJinNegPos);
+}
+
+// 同一期內上一個 KD 的 mag（Dn 比較用）
+function getLastKdInCurrentPeriod(ck, isJin) {
+  const cells = getCellHistory(ck);
+  let lastMag=null, prevB=null, curJin=null;
+  for (const c of cells) {
+    const cJin = c.period.startsWith('進場期'), day = getDN(c.period);
+    if (curJin !== cJin) { curJin = cJin; if (cJin !== isJin) lastMag = null; }
+    if (cJin === isJin) {
+      if (day === 1) lastMag = c.mag;
+      else if (prevB !== null) {
+        if (isJin && prevB>200 && c.brk<=200) lastMag = c.mag;
+        else if (!isJin && prevB<0 && c.brk>=0) lastMag = c.mag;
+      }
+    }
+    prevB = c.brk;
   }
   return lastMag;
 }
 
-function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
-
-// 缺席D1偵測：只看最近一個 cell 的期間方向
-// 若與今天相同 → D1 早已提交；若不同 → 期間剛切換，D1 可能缺席
+// 缺席D1偵測：最近一格的期間方向與今天相同→D1已存在；不同→期間剛切換D1缺席
 function d1ExistsForCurrentPeriod(ck, isJin) {
-  const re = new RegExp(`data-ck="${ck.replace('|','\\|')}" title="([^"]+)"`, 'g');
-  let lastIsJin = null, m;
-  while ((m = re.exec(html)) !== null) {
-    const tm = m[1].match(/^(\d{4}-\d{2}-\d{2}) [^:]+: mag=\d+, brk=-?\d+, ([^\s,\[【]+)/);
-    if (!tm) continue;
-    if (tm[1] >= date) break;
-    lastIsJin = tm[2].startsWith('進場期');
-  }
-  return lastIsJin === isJin;
+  const cells = getCellHistory(ck);
+  if (!cells.length) return false;
+  return cells[cells.length-1].period.startsWith('進場期') === isJin;
 }
 
 function computeKdJl(ck, mag, brk, period) {
   if (!period || mag==='' || brk==='') return { kd:'', jl:'' };
   const isJin = period.startsWith('進場期'), day = getDN(period);
-  const pb = prevBrkFromHtml(ck);
+  const cells = getCellHistory(ck);
+  const prevB = cells.length ? cells[cells.length-1].brk : null;
   let kd='', jl='';
-  if (day===1) {
-    // 正常D1
+  const isDnKd = day>1 && prevB!==null &&
+    ((isJin && prevB>200 && brk<=200) || (!isJin && prevB<0 && brk>=0));
+  const isD1 = day===1 || (!isDnKd && !d1ExistsForCurrentPeriod(ck, isJin));
+  if (isD1) {
     kd = isJin ? 'jin' : 'tui';
+    const ref = getD1RefMag(ck, isJin);
     if (isJin) {
-      jl = brk > 200 ? '劣進D1' : '優進D1';
+      jl = brk>=200 ? '劣進' : (!ref||mag>ref) ? '優進' : '劣進';
     } else {
-      if (brk < 0) {
-        jl = '劣退D1';
-      } else {
-        const pkm = lastKdMag(ck, false);
-        jl = (pkm !== null && mag > pkm) ? '劣退D1' : '優退D1';
-      }
+      jl = brk<=0 ? '劣退' : (!ref||mag<ref) ? '優退' : '劣退';
     }
-  } else if (!d1ExistsForCurrentPeriod(ck, isJin)) {
-    // 缺席D1規則：D1未提交，以此天作等效D1（不設tp，標記實際天數）
-    kd = isJin ? 'jin' : 'tui';
+  } else if (isDnKd) {
+    const pkm = getLastKdInCurrentPeriod(ck, isJin);
     if (isJin) {
-      jl = brk > 200 ? `劣進D${day}` : `優進D${day}`;
-    } else {
-      if (brk < 0) {
-        jl = `劣退D${day}`;
-      } else {
-        const pkm = lastKdMag(ck, false);
-        jl = (pkm !== null && mag > pkm) ? `劣退D${day}` : `優退D${day}`;
-      }
-    }
-  } else if (pb !== null) {
-    if (isJin && pb>200 && brk<=200) {
-      const pkm = lastKdMag(ck, true);
       kd = (pkm!==null && mag<pkm) ? 'jin-tp' : 'jin';
-    } else if (!isJin && pb<0 && brk>=0) {
-      const pkm = lastKdMag(ck, false);
+      if (pkm!==null) jl = mag>pkm ? '續抱多' : mag<pkm ? '止盈多' : '';
+    } else {
       kd = (pkm!==null && mag>pkm) ? 'tui-tp' : 'tui';
+      if (pkm!==null) jl = mag<pkm ? '續抱空' : mag>pkm ? '止盈空' : '';
     }
   }
   return { kd, jl };
 }
-
 function recompute() {
   rows.forEach((row, i) => {
     if (row.mag==='' || row.brk==='' || !row.period) return;
@@ -579,7 +585,8 @@ function makeCell(row) {
   const te    = kd==='jin-tp'?'【做多止盈】':(kd==='tui-tp'?'【做空止盈】':'');
   const key   = ck.split('|')[1];
   const title = `${date} ${key}: mag=${mag}, brk=${brk}, ${period}${te}`;
-  const jlDiv = jl ? `\n          <div class="jl ${jl.startsWith('劣')?'lie':'yu'}">${jl}</div>` : '';
+  const lieJl = new Set(['劣進','劣退','止盈多','止盈空']);
+  const jlDiv = jl ? `\n          <div class="jl ${lieJl.has(jl)?'lie':'yu'}">${jl}</div>` : '';
   return `        <td class="today-col ${zjp}${base}${kds}" data-ck="${ck}" title="${title}">\n` +
          `          <div class="cp">${cp}</div>\n` +
          `          <div class="cv">${mag}</div>\n` +
