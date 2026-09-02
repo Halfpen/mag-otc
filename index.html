@@ -53,9 +53,12 @@ td.nm:hover{color:#fff;background:#161626!important;}
 /* 進場期做多最佳止盈點：雙純綠線 */
 .kd-jin-tp{background:#001a00!important;outline:2px dashed #00ff00;outline-offset:-1px;box-shadow:none!important;}
 .kd-jin-tp.jin-hot{background:#0a2200!important;box-shadow:inset 0 0 0 2px #00ff00,inset 0 0 0 5px #0a2200,inset 0 0 0 7px #00ff00!important;}
+/* 爆破狀態的KD格：保留brk底色，只加邊框指示KD */
+.kd-jin.jin-hot{background:var(--jin-hot)!important;}
 /* 退場期做空最佳止盈點：雙純紅線 */
 .kd-tui-tp{background:#1a0000!important;outline:2px dashed #ff0000;outline-offset:-1px;box-shadow:none!important;}
 .kd-tui-tp.tui-neg{background:#2a0800!important;box-shadow:inset 0 0 0 2px #ff0000,inset 0 0 0 5px #2a0800,inset 0 0 0 7px #ff0000!important;}
+.kd-tui.tui-neg{background:var(--tui-neg)!important;}
 .cp{font-size:10px;color:#777;line-height:1.2;}.zj-jin .cp{color:#ff6666!important;}.zj-tui .cp{color:#66ff66!important;}.cv{font-size:12px;font-weight:700;line-height:1.2;}.cb{font-size:10px;line-height:1.2;}
 .pr{font-size:9px;color:#4a6a48;line-height:1.3;min-height:0;}.pr.live{color:#5a9a58;}
 .pos{color:#4ade80;}.neg{color:#f87171;}.hot{color:#fbbf24;font-weight:800;}.big{color:#a78bfa;}
