@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Mag 場外指數體系</title>
+<style>
+:root{--jin-dim:#0a2318;--jin-hot:#0f4a20;--tui-pos:#2b0d0d;--tui-neg:#3d2200;--kd-jin-col:#00ff00;--kd-tui-col:#ff0000;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;background:#0f0f13;color:#e0e0e0;font-size:11px;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+h1{padding:10px 16px 3px;font-size:14px;color:#fff;flex-shrink:0;}
+.meta{padding:0 16px 5px;font-size:11px;color:#555;flex-shrink:0;}
+.topbar{display:flex;gap:6px;padding:5px 16px;flex-shrink:0;flex-wrap:wrap;align-items:center;border-bottom:1px solid #1a1a28;}
+.btn{background:#1a1a28;border:1px solid #252535;color:#888;padding:3px 9px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap;}
+.btn:hover{background:#222238;color:#ccc;}.btn.on{background:#2e2e52;border-color:#4444aa;color:#ddd;}
+.sep{color:#2a2a3a;padding:0 2px;font-size:14px;}
+.hcount{color:#555;font-size:11px;margin-left:4px;}
+.cpk{display:flex;align-items:center;gap:3px;cursor:pointer;}
+.cpk input[type=color]{width:22px;height:20px;border:1px solid #252535;border-radius:3px;padding:1px;background:#1a1a28;cursor:pointer;}
+.cpl{font-size:10px;color:#666;white-space:nowrap;}
+.legend{display:flex;gap:12px;padding:4px 16px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid #1a1a28;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:#777;}
+.sw{width:18px;height:13px;border-radius:2px;flex-shrink:0;}
+.main{display:flex;flex:1;overflow:hidden;}
+.side{width:158px;flex-shrink:0;overflow-y:auto;border-right:1px solid #1a1a28;padding:7px 5px;background:#0c0c10;}
+.side-title{font-size:9px;color:#444;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 4px 5px;border-bottom:1px solid #1a1a28;margin-bottom:5px;}
+.gl{font-size:9px;color:#393960;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:7px 4px 2px;}
+.ac{display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;cursor:pointer;}
+.ac:hover{background:#161626;}
+.ac input{margin:0;cursor:pointer;accent-color:#4466dd;width:12px;height:12px;}
+.ac label{cursor:pointer;font-size:11px;color:#aaa;user-select:none;line-height:1.3;}
+.ac.hid label{color:#383848;text-decoration:line-through;}
+.sa{padding:6px 4px;border-top:1px solid #1a1a28;margin-top:5px;display:flex;flex-direction:column;gap:4px;}
+.sb{background:#161626;border:1px solid #22223a;color:#666;padding:3px 6px;border-radius:3px;cursor:pointer;font-size:10px;text-align:center;}
+.sb:hover{background:#1e1e36;color:#aaa;}
+.wrap{flex:1;overflow:auto;}
+table{border-collapse:collapse;white-space:nowrap;table-layout:fixed;}
+th:first-child,td:first-child{position:sticky;left:0;z-index:3;background:#0f0f13;width:72px;min-width:72px;}
+thead th{position:sticky;top:0;z-index:2;background:#141420;}
+thead th:first-child{z-index:4;}
+tr.grp td{background:#12122a;color:#555588;font-weight:700;font-size:9px;padding:3px 8px;border-top:1px solid #1a1a30;letter-spacing:1px;text-transform:uppercase;position:sticky;left:0;z-index:3;}
+th{padding:4px 2px;text-align:center;border:1px solid #181828;color:#444;font-weight:500;font-size:10px;min-width:56px;}
+th.today{color:#ffcc44;border-bottom:2px solid #ffcc44;}
+td{padding:3px 3px 2px;text-align:center;border:1px solid #141414;min-width:56px;vertical-align:top;}
+td.nm{text-align:left;padding:3px 6px;font-weight:600;color:#bbb;background:#0f0f13!important;font-size:11px;}
+td.nm:hover{color:#fff;background:#161626!important;}
+.jin{background:var(--jin-dim);}.jin-hot{background:var(--jin-hot);}.tui-pos{background:var(--tui-pos);}.tui-neg{background:var(--tui-neg);}.mt{background:#0f0f13;}
+.kd-jin{background:color-mix(in srgb,var(--kd-jin-col) 15%,#000)!important;box-shadow:inset 0 0 0 3px var(--kd-jin-col);}
+.kd-tui{background:color-mix(in srgb,var(--kd-tui-col) 15%,#000)!important;box-shadow:inset 0 0 0 3px var(--kd-tui-col);}
+.kd-jin-tp{background:#001a00!important;outline:2px dashed #00ff00;outline-offset:-1px;box-shadow:none!important;}
+.kd-jin-tp.jin-hot{background:#0a2200!important;box-shadow:inset 0 0 0 2px #00ff00,inset 0 0 0 5px #0a2200,inset 0 0 0 7px #00ff00!important;}
+.kd-jin.jin-hot{background:var(--jin-hot)!important;}
+.kd-tui-tp{background:#1a0000!important;outline:2px dashed #ff0000;outline-offset:-1px;box-shadow:none!important;}
+.kd-tui-tp.tui-neg{background:#2a0800!important;box-shadow:inset 0 0 0 2px #ff0000,inset 0 0 0 5px #2a0800,inset 0 0 0 7px #ff0000!important;}
+.kd-tui.tui-neg{background:var(--tui-neg)!important;}
+.cp{font-size:10px;color:#777;line-height:1.2;}
+.cv{font-size:12px;font-weight:700;line-height:1.2;}
+.cb{font-size:10px;line-height:1.2;}
+.pr{font-size:9px;color:#4a6a48;line-height:1.3;min-height:0;}
+.pos{color:#4ade80;}.neg{color:#f87171;}.hot{color:#fbbf24;font-weight:800;}.big{color:#a78bfa;}
+.jl{font-size:8px;font-weight:800;margin-top:1px;letter-spacing:0.2px;line-height:1.2;}
+.jl.yu{color:#00ff88;}.jl.lie{color:#ff6633;}
+.today-col{border-left:1px solid #ffcc4433!important;border-right:1px solid #ffcc4433!important;}
+tr:hover td{filter:brightness(1.45);}.rowhid{display:none;}
+th.colhid,td.colhid{display:none;}
+#loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#666;font-size:14px;}
+</style>
+</head><body>
+<div id="loading">載入中…</div>
+<h1 id="h1" style="display:none">📊 Mag 場外指數體系</h1>
+<div class="meta" id="meta" style="display:none"></div>
+<div class="topbar" id="topbar" style="display:none">
+  <span style="color:#444;font-size:11px;">日期</span>
+  <button class="btn on" id="btn-all"  onclick="showRange(0)">全部</button>
+  <button class="btn"    id="btn-r30"  onclick="showRange(30)">近30天</button>
+  <button class="btn"    id="btn-r60"  onclick="showRange(60)">近60天</button>
+  <span class="sep">|</span>
+  <span style="color:#444;font-size:11px;">分組</span>
+  <button class="btn on" onclick="togG(this,'主要幣種')">幣種</button>
+  <button class="btn on" onclick="togG(this,'宏觀')">宏觀</button>
+  <button class="btn on" onclick="togG(this,'美股')">美股</button>
+  <button class="btn on" onclick="togG(this,'A股/ETF')">A股</button>
+  <button class="btn on" onclick="togG(this,'大宗商品')">商品</button>
+  <span class="sep">|</span>
+  <span style="color:#444;font-size:11px;">顏色</span>
+  <label class="cpk"><span class="cpl">進·儲</span><input type="color" value="#0a2318" oninput="setC('--jin-dim',this.value)"></label>
+  <label class="cpk"><span class="cpl">進·噴</span><input type="color" value="#0f4a20" oninput="setC('--jin-hot',this.value)"></label>
+  <label class="cpk"><span class="cpl">退·儲</span><input type="color" value="#2b0d0d" oninput="setC('--tui-pos',this.value)"></label>
+  <label class="cpk"><span class="cpl">退·噴</span><input type="color" value="#3d2200" oninput="setC('--tui-neg',this.value)"></label>
+  <span class="sep">|</span>
+  <label class="cpk"><span class="cpl" style="color:#00ff00">◆進</span><input type="color" value="#00ff00" oninput="setC('--kd-jin-col',this.value)"></label>
+  <label class="cpk"><span class="cpl" style="color:#ff0000">◆退</span><input type="color" value="#ff0000" oninput="setC('--kd-tui-col',this.value)"></label>
+  <button class="btn" onclick="resetC()">↺</button>
+  <span class="sep">|</span>
+  <span class="hcount" id="hc"></span>
+</div>
+<div class="legend" id="legend" style="display:none">
+  <div class="leg"><div class="sw" style="background:var(--jin-hot)"></div>進場期 brk≥200</div>
+  <div class="leg"><div class="sw" style="background:var(--jin-dim)"></div>進場期 brk&lt;200</div>
+  <div class="leg"><div class="sw" style="background:var(--tui-pos)"></div>退場期 brk≥0</div>
+  <div class="leg"><div class="sw" style="background:var(--tui-neg)"></div>退場期 brk&lt;0</div>
+  <div class="leg"><div class="sw" style="box-shadow:inset 0 0 0 3px var(--kd-jin-col);background:color-mix(in srgb,var(--kd-jin-col) 15%,#000)"></div><span style="color:var(--kd-jin-col)">進場關鍵日</span></div>
+  <div class="leg"><div class="sw" style="box-shadow:inset 0 0 0 3px var(--kd-tui-col);background:color-mix(in srgb,var(--kd-tui-col) 15%,#000)"></div><span style="color:var(--kd-tui-col)">退場關鍵日</span></div>
+  <div class="leg"><div class="sw" style="box-shadow:inset 0 0 0 2px #00ff00,inset 0 0 0 5px #001a00,inset 0 0 0 7px #00ff00;background:#001a00"></div><span style="color:#00ff00">做多止盈點</span></div>
+  <div class="leg"><div class="sw" style="box-shadow:inset 0 0 0 2px #ff0000,inset 0 0 0 5px #1a0000,inset 0 0 0 7px #ff0000;background:#1a0000"></div><span style="color:#ff0000">做空止盈點</span></div>
+  <span class="sep">|</span>
+  <div class="leg"><span style="color:#00ff88;font-weight:800;font-size:9px">優進 優退 續抱多 續抱空</span><span style="color:#555;font-size:9px;margin-left:3px">優質信號</span></div>
+  <div class="leg"><span style="color:#ff6633;font-weight:800;font-size:9px">劣進 劣退 止盈多 止盈空</span><span style="color:#555;font-size:9px;margin-left:3px">劣質/止盈</span></div>
+</div>
+<div class="main" id="main" style="display:none">
+  <div class="side">
+    <div class="side-title">顯示資產</div>
+    <div id="sidebar-content"></div>
+    <div class="sa">
+      <button class="sb" onclick="showAll_A()">全部顯示</button>
+      <button class="sb" onclick="hideAll_A()">全部隱藏</button>
+    </div>
+  </div>
+  <div class="wrap"><table id="T"><thead id="T-head"></thead><tbody id="T-body"></tbody></table></div>
+</div>
+
+<script>
+// ── 資產定義 ─────────────────────────────────────────────────────────────────
+// [ck, sidebarLabel, groupToggle, sidebarGroup]
+const TICKER_META = [
+  ['coins|BTC','BTC','主要幣種','主要幣種'],
+  ['coins|ETH','ETH','主要幣種','主要幣種'],
+  ['coins|BNB','BNB','主要幣種','主要幣種'],
+  ['coins|SOL','SOL','主要幣種','主要幣種'],
+  ['coins|DOGE','DOGE','主要幣種','主要幣種'],
+  ['coins|LTC','LTC','主要幣種','主要幣種'],
+  ['coins|SUI','SUI','主要幣種','主要幣種'],
+  ['coins|PEPE','PEPE','主要幣種','主要幣種'],
+  ['coins|HYPE','HYPE','主要幣種','主要幣種'],
+  ['coins|TRUMP','TRUMP','主要幣種','主要幣種'],
+  ['coins|PUMP','PUMP','主要幣種','主要幣種'],
+  ['coins|ZEC','ZEC','主要幣種','主要幣種'],
+  ['coins|CRV','CRV','主要幣種','主要幣種'],
+  ['coins|LINK','LINK','主要幣種','主要幣種'],
+  ['coins|UNI','UNI','主要幣種','主要幣種'],
+  ['coins|SEI','SEI','主要幣種','主要幣種'],
+  ['macro|NASDAQ_OTC','NASDAQ','宏觀','宏觀'],
+  ['macro|BTC_VEGA','BTC_VEGA','宏觀','宏觀'],
+  ['stocks|SPCX','SPCX','美股','美股'],
+  ['stocks|NVDA','NVDA','美股','美股'],
+  ['stocks|AAPL','AAPL','美股','美股'],
+  ['stocks|MSFT','MSFT','美股','美股'],
+  ['stocks|AMZN','AMZN','美股','美股'],
+  ['stocks|GOOG','GOOG','美股','美股'],
+  ['stocks|TSLA','TSLA','美股','美股'],
+  ['stocks|HOOD','HOOD','美股','美股'],
+  ['stocks|COIN','COIN','美股','美股'],
+  ['stocks|CIRCLE','CIRCLE','美股','美股'],
+  ['stocks|MU','MU','美股','美股'],
+  ['stocks|SNDK','SNDK','美股','美股'],
+  ['stocks|PLTR','PLTR','美股','美股'],
+  ['stocks|AAOI','AAOI','美股','美股'],
+  ['stocks|AXTI','AXTI','美股','美股'],
+  ['stocks|GLW','GLW','美股','美股'],
+  ['stocks|HYNIX','HYNIX','美股','美股'],
+  ['stocks|SAMSUNG','SAMSUNG','美股','美股'],
+  ['macro|CN_ASTOCK','A股指數','A股/ETF','A股/ETF'],
+  ['macro|CN_AI_ETF','A股AI','A股/ETF','A股/ETF'],
+  ['macro|CN_ROBOT','機器人','A股/ETF','A股/ETF'],
+  ['macro|CN_PCB','PCB','A股/ETF','A股/ETF'],
+  ['macro|CN_MLCC','MLCC','A股/ETF','A股/ETF'],
+  ['macro|CN_SEMICONDUCTOR','半導體','A股/ETF','A股/ETF'],
+  ['commodities|GOLD','黃金','大宗商品','大宗商品'],
+  ['commodities|SILVER','白銀','大宗商品','大宗商品'],
+  ['commodities|OIL','石油','大宗商品','大宗商品'],
+  ['commodities|COPPER','銅','大宗商品','大宗商品'],
+  ['commodities|PORK','豬肉','大宗商品','大宗商品'],
+];
+
+const SIDEBAR_GROUPS = ['主要幣種','宏觀','美股','A股/ETF','大宗商品'];
+
+// ── 狀態 ─────────────────────────────────────────────────────────────────────
+let DATA = null;         // data.json content
+let hiddenRows = new Set();
+let hiddenGroups = new Set();
+let visibleCols = [];    // indexes of cols currently shown
+
+// ── 載入 data.json ────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch('./data.json?t=' + Date.now());
+    DATA = await r.json();
+    render();
+  } catch(e) {
+    document.getElementById('loading').textContent = '載入失敗: ' + e.message;
+  }
+}
+
+// ── 主渲染 ───────────────────────────────────────────────────────────────────
+function render() {
+  const cols = DATA.cols;
+  const today = new Date().toISOString().slice(0,10);
+  visibleCols = cols.map((_,i) => i);  // all visible initially
+
+  buildSidebar();
+  buildHeader(cols, today);
+  buildBody(cols, today);
+  updateMeta(cols, today);
+  document.getElementById('loading').style.display = 'none';
+  ['h1','meta','topbar','legend','main'].forEach(id => document.getElementById(id).style.display = '');
+}
+
+// ── 側邊欄 ───────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const sb = document.getElementById('sidebar-content');
+  let html = '';
+  let lastGroup = '';
+  for (const [ck, label,, sGroup] of TICKER_META) {
+    if (sGroup !== lastGroup) {
+      html += `<div class="gl">${sGroup}</div>`;
+      lastGroup = sGroup;
+    }
+    const rowId = 'row_' + ck.replace('|','_');
+    html += `<div class="ac" id="ac_${rowId}">
+      <input type="checkbox" id="cb_${rowId}" checked onchange="togA('${rowId}',this.checked)">
+      <label for="cb_${rowId}">${label}</label></div>`;
+  }
+  sb.innerHTML = html;
+}
+
+// ── 表頭 ─────────────────────────────────────────────────────────────────────
+function buildHeader(cols, today) {
+  const head = document.getElementById('T-head');
+  let html = '<tr><th>資產</th>';
+  for (const d of cols) {
+    const [,m,day] = d.split('-');
+    const isToday = d === today;
+    html += `<th${isToday?' class="today"':''} title="${d}">${+m}/${+day}</th>`;
+  }
+  html += '</tr>';
+  head.innerHTML = html;
+}
+
+// ── 表體 ─────────────────────────────────────────────────────────────────────
+function buildBody(cols, today) {
+  const tbody = document.getElementById('T-body');
+  let html = '';
+  let lastGroup = '';
+
+  for (const [ck, label, groupToggle] of TICKER_META) {
+    const rowData = DATA.rows[ck] || {};
+    const rowId = 'row_' + ck.replace('|','_');
+
+    // group separator row
+    if (groupToggle !== lastGroup) {
+      html += `<tr class="grp" data-g="${groupToggle}"><td>${groupToggle}</td></tr>`;
+      lastGroup = groupToggle;
+    }
+
+    html += `<tr id="${rowId}" data-g="${groupToggle}"><td class="nm">${label}</td>`;
+    for (const d of cols) {
+      const rec = rowData[d];
+      html += rec ? buildCell(rec, d, today) : '<td class="mt"></td>';
+    }
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function buildCell(rec, d, today) {
+  const { mag, brk, period, kd, jl, price } = rec;
+  const jin = period.startsWith('進場期');
+  const tui = period.startsWith('退場期');
+
+  // base class
+  let cls = 'mt';
+  if (jin) cls = brk >= 200 ? 'jin-hot' : 'jin';
+  else if (tui) cls = brk < 0 ? 'tui-neg' : 'tui-pos';
+
+  // kd modifier
+  if (kd === 'jin')    cls += ' kd-jin';
+  else if (kd === 'tui')    cls += ' kd-tui';
+  else if (kd === 'jin-tp') cls += ' kd-jin-tp';
+  else if (kd === 'tui-tp') cls += ' kd-tui-tp';
+
+  if (d === today) cls += ' today-col';
+
+  // period abbreviation: 進場期D1 → 進D1
+  const pAbbr = period.replace('場期','');
+
+  // mag display
+  const magCls = mag >= 1500 ? ' big' : '';
+
+  // brk display
+  let brkCls = 'pos', brkStr = '+' + brk;
+  if (brk >= 200)         { brkCls = 'hot'; brkStr = '+' + brk; }
+  else if (brk < 0)       { brkCls = 'neg'; brkStr = '' + brk; }
+
+  // jl
+  let jlHtml = '';
+  if (jl) {
+    const jlCls = ['優進','優退','續抱多','續抱空'].includes(jl) ? 'yu' : 'lie';
+    jlHtml = `<div class="jl ${jlCls}">${jl}</div>`;
+  }
+
+  // price
+  const prHtml = price != null ? `<div class="pr">${price}</div>` : '';
+
+  return `<td class="${cls}"><div class="cp">${pAbbr}</div><div class="cv${magCls}">${mag}</div><div class="cb ${brkCls}">${brkStr}</div>${prHtml}${jlHtml}</td>`;
+}
+
+// ── meta bar ─────────────────────────────────────────────────────────────────
+function updateMeta(cols, today) {
+  const visibleDates = cols.filter(d => d <= today);
+  const n = visibleDates.length;
+  const first = visibleDates[0], last = visibleDates[visibleDates.length-1];
+  document.getElementById('meta').textContent =
+    `${n}天 · ${first} ～ ${last} · ${TICKER_META.length}項資產`;
+  document.getElementById('hc').textContent = '';
+}
+
+// ── 日期範圍過濾 ──────────────────────────────────────────────────────────────
+function showRange(days) {
+  ['btn-all','btn-r30','btn-r60'].forEach(id => document.getElementById(id).classList.remove('on'));
+  const btn = days === 0 ? 'btn-all' : days === 30 ? 'btn-r30' : 'btn-r60';
+  document.getElementById(btn).classList.add('on');
+
+  const cols = DATA.cols;
+  const cutoff = days === 0 ? null : (() => {
+    const d = new Date(); d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0,10);
+  })();
+
+  const ths = document.querySelectorAll('#T-head th');
+  const trs = document.querySelectorAll('#T-body tr:not(.grp)');
+
+  cols.forEach((d, i) => {
+    const hide = cutoff && d < cutoff;
+    // +1 because first th is "資產"
+    ths[i+1].classList.toggle('colhid', hide);
+    trs.forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds[i+1]) tds[i+1].classList.toggle('colhid', hide);
+    });
+  });
+}
+
+// ── 分組 toggle ───────────────────────────────────────────────────────────────
+function togG(btn, group) {
+  btn.classList.toggle('on');
+  const on = btn.classList.contains('on');
+  document.querySelectorAll(`tr[data-g="${group}"]`).forEach(tr => {
+    if (tr.classList.contains('grp')) return;
+    const ck = tr.id.replace('row_','').replace('_','|');  // simplified
+    tr.classList.toggle('rowhid', !on || hiddenRows.has(tr.id));
+    const ac = document.getElementById('ac_' + tr.id);
+    if (ac) ac.classList.toggle('hid', !on);
+  });
+  if (on) hiddenGroups.delete(group);
+  else hiddenGroups.add(group);
+}
+
+// ── 個別資產 toggle ───────────────────────────────────────────────────────────
+function togA(rowId, checked) {
+  const row = document.getElementById(rowId);
+  const ac  = document.getElementById('ac_' + rowId);
+  if (checked) {
+    hiddenRows.delete(rowId);
+    if (row) row.classList.remove('rowhid');
+  } else {
+    hiddenRows.add(rowId);
+    if (row) row.classList.add('rowhid');
+  }
+  if (ac) ac.classList.toggle('hid', !checked);
+}
+
+function showAll_A() {
+  hiddenRows.clear();
+  document.querySelectorAll('#T-body tr:not(.grp)').forEach(tr => tr.classList.remove('rowhid'));
+  document.querySelectorAll('.ac').forEach(el => { el.classList.remove('hid'); el.querySelector('input').checked = true; });
+}
+function hideAll_A() {
+  document.querySelectorAll('#T-body tr:not(.grp)').forEach(tr => {
+    hiddenRows.add(tr.id);
+    tr.classList.add('rowhid');
+  });
+  document.querySelectorAll('.ac').forEach(el => { el.classList.add('hid'); el.querySelector('input').checked = false; });
+}
+
+// ── 顏色 ─────────────────────────────────────────────────────────────────────
+function setC(v, val) { document.documentElement.style.setProperty(v, val); }
+function resetC() {
+  [['--jin-dim','#0a2318'],['--jin-hot','#0f4a20'],['--tui-pos','#2b0d0d'],['--tui-neg','#3d2200'],
+   ['--kd-jin-col','#00ff00'],['--kd-tui-col','#ff0000']].forEach(([v,d]) => {
+    document.documentElement.style.setProperty(v, d);
+    const inp = document.querySelector(`input[oninput="setC('${v}',this.value)"]`);
+    if (inp) inp.value = d;
+  });
+}
+
+init();
+</script>
+</body></html>
