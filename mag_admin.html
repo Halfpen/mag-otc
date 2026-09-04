@@ -714,6 +714,7 @@ async function commitData() {
         const rec = { mag: +row.mag, brk: +row.brk, period: row.period };
         if (row.kd) rec.kd = row.kd;
         if (row.jl) rec.jl = row.jl;
+        if (row.zj) rec.zj = true;
         patches[row.ck] = rec;
       });
       await patchDataJson(date, patches,

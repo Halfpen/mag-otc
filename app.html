@@ -262,7 +262,7 @@ function buildBody(cols, today) {
 }
 
 function buildCell(rec, d, today) {
-  const { mag, brk, period, kd, jl, price } = rec;
+  const { mag, brk, period, kd, jl, price, zj } = rec;
   const jin = period.startsWith('進場期');
   const tui = period.startsWith('退場期');
 
@@ -270,6 +270,9 @@ function buildCell(rec, d, today) {
   let cls = 'mt';
   if (jin) cls = brk >= 200 ? 'jin-hot' : 'jin';
   else if (tui) cls = brk < 0 ? 'tui-neg' : 'tui-pos';
+
+  // 逼近狀態
+  if (zj) cls += jin ? ' zj-jin' : ' zj-tui';
 
   // kd modifier
   if (kd === 'jin')    cls += ' kd-jin';
