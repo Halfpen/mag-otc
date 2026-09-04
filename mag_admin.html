@@ -454,7 +454,7 @@ function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
 // 從 title 屬性掃描所有歷史 cells（含無 data-ck 的舊格）
 function getCellHistory(ck) {
   const ticker = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${ticker}: mag=(-?[\\d.]+), brk=(-?[\\d.]+), ([^"【]+)"`, 'g');
+  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${ticker}: mag=(-?[\\d.]+), brk=(-?[\\d.]+), ([^"【]+)(?:【[^"]*】)?"`, 'g');
   const cells = [];
   let m;
   while ((m = re.exec(html)) !== null) {
