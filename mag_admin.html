@@ -327,6 +327,42 @@ async function ghReadHtml() {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
+// 讀取 data.json blob
+async function ghReadDataJson() {
+  const ref = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
+  const commitSha = ref.object?.sha;
+  if (!commitSha) throw new Error('無法取得 ref SHA');
+  const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
+  const tree   = await (await ghReq(`/repos/${REPO}/git/trees/${commit.tree.sha}`)).json();
+  const entry  = tree.tree?.find(e => e.path === 'data.json');
+  if (!entry)  throw new Error('data.json 不在 repo 中');
+  const blobRes = await ghReq(`/repos/${REPO}/git/blobs/${entry.sha}`);
+  if (!blobRes.ok) throw new Error('讀取 data.json blob 失敗 ' + blobRes.status);
+  const { content } = await blobRes.json();
+  const b64   = content.replace(/\n/g, '');
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
+
+// 把新的 patches 合併進 data.json 並寫回 GitHub
+// patches: { [ck]: { mag?, brk?, period?, kd?, jl?, price? } }
+async function patchDataJson(dt, patches, onProgress) {
+  onProgress?.('讀取 data.json...');
+  const data = await ghReadDataJson();
+  for (const [ck, fields] of Object.entries(patches)) {
+    if (!data.rows[ck]) data.rows[ck] = {};
+    const existing = data.rows[ck][dt] || {};
+    const merged   = { ...existing };
+    for (const [k, v] of Object.entries(fields)) {
+      if (v !== null && v !== undefined && v !== '') merged[k] = v;
+    }
+    data.rows[ck][dt] = merged;
+  }
+  if (!data.cols.includes(dt)) { data.cols.push(dt); data.cols.sort(); }
+  const json = JSON.stringify(data, null, 2);
+  await ghWrite('data.json', json, `Mag data.json: ${dt}`, onProgress);
+}
+
 // ── ① 連線 ───────────────────────────────────────────────────────────────────
 async function connect() {
   PAT = document.getElementById('inp-pat').value.trim()
@@ -670,6 +706,22 @@ async function commitData() {
     html = newHtml;
     document.getElementById('prog3').textContent = '';
     showMsg('msg3','ok',`✓ ${date} 已寫入 GitHub（${n}/43 筆）`);
+    // 同步寫入 data.json
+    try {
+      const patches = {};
+      rows.forEach(row => {
+        if (row.mag==='' || row.brk==='' || !row.period) return;
+        const rec = { mag: +row.mag, brk: +row.brk, period: row.period };
+        if (row.kd) rec.kd = row.kd;
+        if (row.jl) rec.jl = row.jl;
+        patches[row.ck] = rec;
+      });
+      await patchDataJson(date, patches,
+        msg => document.getElementById('prog3').textContent = msg);
+      document.getElementById('prog3').textContent = '';
+    } catch(e) {
+      document.getElementById('prog3').textContent = '⚠️ data.json: ' + e.message;
+    }
     setStep(4); show('c4'); buildPriceTable();
   } catch(e) {
     showMsg('msg3','err','❌ '+e.message);
@@ -794,6 +846,24 @@ async function commitPrices() {
     html = h;
     document.getElementById('prog4').textContent = '';
     document.getElementById('fetch-msg').textContent = `✓ 注入 ${injected}/43 並寫入 GitHub`;
+    // 同步價格至 data.json
+    try {
+      const pricePatches = {};
+      ASSETS.forEach(([ck]) => {
+        const id  = ck.replace('|','_');
+        const val = document.getElementById('pr-'+id)?.value ?? '';
+        if (!val || val==='---') return;
+        const num = val.endsWith('k')
+          ? parseFloat(val)*1000
+          : parseFloat(val.replace(/[^\d.]/g,''));
+        if (!isNaN(num) && num>0) pricePatches[ck] = { price: num };
+      });
+      await patchDataJson(date, pricePatches,
+        msg => document.getElementById('prog4').textContent = msg);
+      document.getElementById('prog4').textContent = '';
+    } catch(e) {
+      document.getElementById('prog4').textContent = '⚠️ data.json: ' + e.message;
+    }
     setStep(5); show('c5');
   } catch(e) {
     document.getElementById('prog4').textContent = '';
