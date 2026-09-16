@@ -178,7 +178,9 @@ const ASSETS = [
   ['stocks|AXTI',  'AXTI',   'AXTI',   'AXTIUSDT',  'BYBIT_LINEAR'],
   ['stocks|GLW',   'GLW',    'GLW',    'GLWUSDT',   'BYBIT_LINEAR'],
   ['stocks|HYNIX', 'SKHynix','HYNIX',  'SKHYNIXUSDT','BYBIT_LINEAR'],
-  ['stocks|SAMSUNG','Samsung','SAMSUNG','005930.KS', 'YAHOO_KRW'],
+  ['stocks|SAMSUNG',    'Samsung',    'SAMSUNG',    '005930.KS',     'YAHOO_KRW'],
+  ['stocks|OPENAI',     'OpenAI',     'OPENAI',     'OPENAIUSDT',    'BYBIT_LINEAR'],
+  ['stocks|ANTHROPIC',  'Anthropic',  'ANTHROPIC',  'ANTHROPICUSDT', 'BYBIT_LINEAR'],
   ['macro|CN_ASTOCK',       'CN_AShares',   'CN_AShares', null,'CN'],
   ['macro|CN_AI_ETF',       'CN_AI_ETF',    'CN_AI_ETF',  null,'CN'],
   ['macro|CN_ROBOT',        'CN_Robot_ETF', 'CN_Robot',   null,'CN'],
@@ -220,6 +222,8 @@ const NAME_TO_CK = {
   'AAOI':'stocks|AAOI','AXTI':'stocks|AXTI','GLW':'stocks|GLW','Corning':'stocks|GLW',
   'HYNIX':'stocks|HYNIX','SKHynix':'stocks|HYNIX','SK海力士':'stocks|HYNIX','海力士':'stocks|HYNIX',
   'SAMSUNG':'stocks|SAMSUNG','三星电子':'stocks|SAMSUNG','三星':'stocks|SAMSUNG','Samsung':'stocks|SAMSUNG',
+  'OPENAI':'stocks|OPENAI','OpenAI':'stocks|OPENAI',
+  'ANTHROPIC':'stocks|ANTHROPIC','Anthropic':'stocks|ANTHROPIC',
   'CN_ASTOCK':'macro|CN_ASTOCK','A股':'macro|CN_ASTOCK','中国A股':'macro|CN_ASTOCK',
   'CN_AI_ETF':'macro|CN_AI_ETF',
   'CN_ROBOT':'macro|CN_ROBOT','机器人ETF':'macro|CN_ROBOT','机器人':'macro|CN_ROBOT',
@@ -447,7 +451,7 @@ function parseData() {
   }
 
   rows = ASSETS.map(([ck]) => found.get(ck) || { ck, mag:'', brk:'', period:'', zj:false, kd:'', jl:'' });
-  document.getElementById('parse-hint').textContent = `識別 ${rows.filter(r=>r.mag!=='').length}/43`;
+  document.getElementById('parse-hint').textContent = `識別 ${rows.filter(r=>r.mag!=='').length}/${ASSETS.length}`;
   // 自動計算 KD（解析後立即觸發）
   rows.forEach((row, i) => {
     if (row.mag==='' || row.brk==='' || !row.period) return;
@@ -671,8 +675,16 @@ function buildNewHtml() {
     if (row.mag === '') continue;
     const anchor = `data-ck="${row.ck}"`;
     const last   = h.lastIndexOf(anchor);
-    if (last === -1) throw new Error('找不到 anchor: ' + row.ck);
-    const pos = h.indexOf('</td>', last) + 5;
+    let pos;
+    if (last === -1) {
+      // 全新標（尚無歷史數據）：定位到對應 tr 的結尾
+      const rowId  = `id="row_${row.ck.replace('|', '_')}"`;
+      const rowIdx = h.indexOf(rowId);
+      if (rowIdx === -1) throw new Error('找不到 anchor: ' + row.ck);
+      pos = h.indexOf('</tr>', rowIdx);
+    } else {
+      pos = h.indexOf('</td>', last) + 5;
+    }
     h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
   }
 
@@ -705,7 +717,7 @@ async function commitData() {
       msg => document.getElementById('prog3').textContent = msg);
     html = newHtml;
     document.getElementById('prog3').textContent = '';
-    showMsg('msg3','ok',`✓ ${date} 已寫入 GitHub（${n}/43 筆）`);
+    showMsg('msg3','ok',`✓ ${date} 已寫入 GitHub（${n}/${ASSETS.length} 筆）`);
     // 同步寫入 data.json
     try {
       const patches = {};
@@ -846,7 +858,7 @@ async function commitPrices() {
       msg => document.getElementById('prog4').textContent = msg);
     html = h;
     document.getElementById('prog4').textContent = '';
-    document.getElementById('fetch-msg').textContent = `✓ 注入 ${injected}/43 並寫入 GitHub`;
+    document.getElementById('fetch-msg').textContent = `✓ 注入 ${injected}/${ASSETS.length} 並寫入 GitHub`;
     // 同步價格至 data.json
     try {
       const pricePatches = {};
