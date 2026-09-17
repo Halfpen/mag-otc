@@ -116,7 +116,9 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
 <div class="card" id="c4" style="display:none">
   <h2>④ 抓取價格 + 注入</h2>
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
-    <button class="btn-p" onclick="fetchAllPrices()" id="btn-fetch">📡 自動抓取</button>
+    <label style="font-size:12px;color:#94a3b8">時間 (HKT)：</label>
+    <select id="price-time" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:12px"></select>
+    <button class="btn-p" onclick="fetchAllPrices()" id="btn-fetch">📡 抓取</button>
     <button class="btn-g" onclick="commitPrices()" id="btn-inject">💉 注入並寫入 GitHub</button>
     <span id="fetch-msg" style="font-size:11px;color:#64748b"></span>
   </div>
@@ -745,6 +747,7 @@ async function commitData() {
 
 // ── ④ 價格 ───────────────────────────────────────────────────────────────────
 function buildPriceTable() {
+  buildTimeSelect();
   const tb = document.getElementById('price-body');
   tb.innerHTML = '';
   ASSETS.forEach(([ck,, d,, src]) => {
@@ -761,6 +764,54 @@ function buildPriceTable() {
   });
 }
 
+// ── 時間選擇器 ───────────────────────────────────────────────────────────────
+function buildTimeSelect() {
+  const sel = document.getElementById('price-time');
+  sel.innerHTML = '<option value="">現在（即時）</option>';
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      const label = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      sel.innerHTML += `<option value="${label}">${label}</option>`;
+    }
+  }
+}
+
+// 把 date（YYYY-MM-DD）+ HKT 時間字串 → UTC 毫秒 timestamp
+function hktToUtcMs(dateStr, timeStr) {
+  const [hh, mm] = timeStr.split(':').map(Number);
+  // HKT = UTC+8，所以 UTC = HKT - 8h
+  const d = new Date(`${dateStr}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+08:00`);
+  return d.getTime();
+}
+
+// 依 source 取指定時刻的收盤價（5min K 線）
+async function fetchPriceAtTime(sym, src, startMs) {
+  const endMs = startMs + 5 * 60 * 1000 - 1;
+  try {
+    if (src === 'BINANCE') {
+      const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=5m&startTime=${startMs}&endTime=${endMs}&limit=1`);
+      const d = await r.json();
+      return d?.[0] ? parseFloat(d[0][4]) : null; // close price
+    } else if (src === 'BYBIT') {
+      const r = await fetch(`https://api.bybit.com/v5/market/kline?category=spot&symbol=${sym}&interval=5&start=${startMs}&end=${endMs}&limit=1`);
+      const d = await r.json();
+      return d.result?.list?.[0] ? parseFloat(d.result.list[0][4]) : null;
+    } else if (src === 'BYBIT_LINEAR') {
+      const r = await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=5&start=${startMs}&end=${endMs}&limit=1`);
+      const d = await r.json();
+      return d.result?.list?.[0] ? parseFloat(d.result.list[0][4]) : null;
+    } else if (src === 'KUCOIN') {
+      const startSec = Math.floor(startMs / 1000);
+      const endSec   = Math.floor(endMs   / 1000);
+      const kcUrl = `https://api.kucoin.com/api/v1/market/candles?type=5min&symbol=${sym}&startAt=${startSec}&endAt=${endSec}`;
+      const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(kcUrl)}`);
+      const d = await r.json();
+      return d.data?.[0] ? parseFloat(d.data[0][2]) : null; // close
+    }
+  } catch { return null; }
+  return null;
+}
+
 function fmtPrice(p, src) {
   if (p === null || isNaN(p)) return null;
   if (src==='YAHOO_KRW') { const v=p/1000; return (v===Math.floor(v)?v.toFixed(0):v.toFixed(1))+'k'; }
@@ -772,7 +823,12 @@ function fmtPrice(p, src) {
 async function fetchAllPrices() {
   document.getElementById('btn-fetch').disabled = true;
   let ok=0, fail=0;
-  document.getElementById('fetch-msg').textContent = '抓取中...';
+  const timeVal = document.getElementById('price-time').value;
+  const useHistorical = !!timeVal;
+  const startMs = useHistorical ? hktToUtcMs(date, timeVal) : null;
+  document.getElementById('fetch-msg').textContent = useHistorical
+    ? `抓取 ${timeVal} HKT 歷史價格中…`
+    : '抓取即時價格中…';
 
   for (const [ck,,, sym, src] of ASSETS) {
     const id = ck.replace('|','_');
@@ -781,7 +837,10 @@ async function fetchAllPrices() {
     if (st) st.textContent = '...';
     try {
       let price;
-      if (src==='BINANCE') {
+      if (useHistorical && src !== 'YAHOO' && src !== 'YAHOO_KRW') {
+        // 歷史 K 線（BINANCE / BYBIT / BYBIT_LINEAR / KUCOIN）
+        price = await fetchPriceAtTime(sym, src, startMs);
+      } else if (src==='BINANCE') {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
         price = parseFloat((await r.json()).price);
       } else if (src==='BYBIT') {
