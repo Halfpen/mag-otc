@@ -116,7 +116,7 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
 <div class="card" id="c4" style="display:none">
   <h2>④ 抓取價格 + 注入</h2>
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
-    <label style="font-size:12px;color:#94a3b8">時間 (HKT)：</label>
+    <label style="font-size:12px;color:#94a3b8">時間 (英國時間)：</label>
     <select id="price-time" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:12px"></select>
     <button class="btn-p" onclick="fetchAllPrices()" id="btn-fetch">📡 抓取</button>
     <button class="btn-g" onclick="commitPrices()" id="btn-inject">💉 注入並寫入 GitHub</button>
@@ -776,12 +776,22 @@ function buildTimeSelect() {
   }
 }
 
-// 把 date（YYYY-MM-DD）+ HKT 時間字串 → UTC 毫秒 timestamp
-function hktToUtcMs(dateStr, timeStr) {
+// 把 date（YYYY-MM-DD）+ 英國時間字串 → UTC 毫秒 timestamp
+// 自動處理 GMT（UTC+0）/ BST（UTC+1）夏令時切換
+function ukToUtcMs(dateStr, timeStr) {
   const [hh, mm] = timeStr.split(':').map(Number);
-  // HKT = UTC+8，所以 UTC = HKT - 8h
-  const d = new Date(`${dateStr}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+08:00`);
-  return d.getTime();
+  // 用正午 UTC 計算當天英國偏移量（避免跨越夏令時切換點的邊界問題）
+  const noonUtc = new Date(`${dateStr}T12:00:00Z`);
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  });
+  const p = Object.fromEntries(fmt.formatToParts(noonUtc).map(({type,value}) => [type,value]));
+  const londonNoonUtcMs = Date.UTC(+p.year, +p.month-1, +p.day, +p.hour%24, +p.minute, +p.second);
+  const ukOffsetMs = londonNoonUtcMs - noonUtc.getTime(); // +3600000 BST, 0 GMT
+  const midnight = new Date(`${dateStr}T00:00:00Z`).getTime();
+  return midnight + (hh * 60 + mm) * 60000 - ukOffsetMs;
 }
 
 // 依 source 取指定時刻的收盤價（5min K 線）
@@ -825,9 +835,9 @@ async function fetchAllPrices() {
   let ok=0, fail=0;
   const timeVal = document.getElementById('price-time').value;
   const useHistorical = !!timeVal;
-  const startMs = useHistorical ? hktToUtcMs(date, timeVal) : null;
+  const startMs = useHistorical ? ukToUtcMs(date, timeVal) : null;
   document.getElementById('fetch-msg').textContent = useHistorical
-    ? `抓取 ${timeVal} HKT 歷史價格中…`
+    ? `抓取 ${timeVal} 英國時間歷史價格中…`
     : '抓取即時價格中…';
 
   for (const [ck,,, sym, src] of ASSETS) {
