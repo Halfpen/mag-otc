@@ -139,6 +139,68 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
   </div>
 </div>
 
+<!-- 🔧 手工修改 -->
+<div class="card" id="c-edit" style="display:none">
+  <h2>🔧 手工修改任意日期</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">資產</label>
+      <select id="edit-asset" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:12px;min-width:120px"></select>
+    </div>
+    <div>
+      <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">日期</label>
+      <input type="date" id="edit-date" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:12px">
+    </div>
+    <button class="btn-p" onclick="loadEditCell()">📂 讀取現有數據</button>
+  </div>
+  <div id="edit-form" style="display:none">
+    <div style="border-top:1px solid #2d3250;padding-top:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">場外指數 (mag)</label>
+          <input type="number" id="edit-mag" style="width:80px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">爆破指數 (brk)</label>
+          <input type="number" id="edit-brk" style="width:80px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">進退場期</label>
+          <input type="text" id="edit-period" placeholder="進場期D14" style="width:120px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">價格</label>
+          <input type="text" id="edit-price" placeholder="$0.00" style="width:90px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+        <div style="text-align:center">
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:5px">逼近</label>
+          <input type="checkbox" id="edit-zj" style="width:16px;height:16px">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+        <div style="align-self:flex-end">
+          <button class="btn-o" onclick="autoComputeEditKd()" style="padding:4px 10px;font-size:11px">🔄 自動計算 KD</button>
+        </div>
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">KD 類型 <span style="color:#475569">（可手動填寫）</span></label>
+          <input type="text" id="edit-kd" placeholder="jin / jin-tp / tui / tui-tp" style="width:180px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:3px">JL 標籤 <span style="color:#475569">（可手動填寫）</span></label>
+          <input type="text" id="edit-jl" placeholder="劣進 / 續抱多 / 止盈多..." style="width:160px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 7px;font-size:12px">
+        </div>
+      </div>
+      <div id="edit-preview" style="display:none;background:#0f1117;border-radius:5px;padding:8px;margin-bottom:8px;font-size:11px;font-family:monospace;color:#94a3b8;word-break:break-all;white-space:pre-wrap"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-o" onclick="previewEditCell()">👁 預覽 HTML</button>
+        <button class="btn-g" onclick="saveEditCell()" id="btn-save-edit">💾 寫入 GitHub（僅改此格）</button>
+      </div>
+    </div>
+  </div>
+  <div id="msg-edit" class="msg"></div>
+  <div id="prog-edit" class="prog"></div>
+</div>
+
 <script>
 // ── 常數 ─────────────────────────────────────────────────────────────────────
 const REPO   = 'Halfpen/mag-otc';
@@ -395,6 +457,8 @@ async function connect() {
       showMsg('msg1', 'ok', `✓ 連線成功 (${login})，index.html ${sz} KB`);
       setStep(2); show('c2');
     }
+    show('c-edit'); setupEditAssets();
+    document.getElementById('edit-date').value = today;
   } catch(e) { showMsg('msg1', 'err', '❌ ' + e.message); }
   document.getElementById('btn-con').disabled = false;
 }
@@ -496,7 +560,7 @@ function getDN(p) { const m = p&&p.match(/D(\d+)/); return m?+m[1]:0; }
 // 從 title 屬性掃描所有歷史 cells（含無 data-ck 的舊格）
 function getCellHistory(ck) {
   const ticker = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${ticker}: mag=(-?[\\d.]+), brk=(-?[\\d.]+), ([^"【]+)(?:【[^"]*】)?"`, 'g');
+  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${ticker}: mag=(-?[\\d.]+), brk=([+\\-]?[\\d.]+), ([^"【]+)(?:【[^"]*】)?"`, 'g');
   const cells = [];
   let m;
   while ((m = re.exec(html)) !== null) {
@@ -952,6 +1016,188 @@ async function commitPrices() {
     document.getElementById('fetch-msg').textContent = '❌ '+e.message;
   }
   document.getElementById('btn-inject').disabled = false;
+}
+
+// ── 手工修改 ─────────────────────────────────────────────────────────────────
+function setupEditAssets() {
+  const sel = document.getElementById('edit-asset');
+  if (!sel || sel.options.length > 0) return;
+  sel.innerHTML = ASSETS.map(([ck,,d]) => `<option value="${ck}">${d}</option>`).join('');
+}
+
+function parseExistingCellFromHtml(ck, dt) {
+  const ticker = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(
+    `<td class="([^"]*)" data-ck="${ck.replace('|','\\|')}"[^>]*title="${dt} ${ticker}: mag=([\\d.]+), brk=([+\\-]?[\\d.]+), ([^"【]+)(?:【([^"]+)】)?"`,
+    'i'
+  );
+  const m = re.exec(html);
+  if (!m) return null;
+  const mIdx = html.indexOf(m[0]);
+  const tdEnd = html.indexOf('</td>', mIdx) + 5;
+  const tdHtml = html.slice(mIdx, tdEnd);
+  const prM = tdHtml.match(/<div class="pr">([^<]*)<\/div>/);
+  const jlM = tdHtml.match(/<div class="jl[^"]*">([^<]+)<\/div>/);
+  const cls  = m[1];
+  const kdM  = cls.match(/kd-(jin-tp|jin|tui-tp|tui)\b/);
+  return {
+    mag:   +m[2],
+    brk:   +m[3],
+    period: m[4].trim(),
+    price: prM ? prM[1] : '',
+    jl:    jlM ? jlM[1] : '',
+    kd:    kdM ? kdM[1] : '',
+    zj:    cls.includes('zj-'),
+  };
+}
+
+function loadEditCell() {
+  const ck = document.getElementById('edit-asset').value;
+  const dt = document.getElementById('edit-date').value;
+  if (!ck || !dt) { showMsg('msg-edit','err','請選擇資產和日期'); return; }
+  if (!html)      { showMsg('msg-edit','err','請先連線 GitHub'); return; }
+  const p = parseExistingCellFromHtml(ck, dt);
+  document.getElementById('edit-mag').value    = p ? p.mag    : '';
+  document.getElementById('edit-brk').value    = p ? p.brk    : '';
+  document.getElementById('edit-period').value = p ? p.period : '';
+  document.getElementById('edit-price').value  = p ? p.price  : '';
+  document.getElementById('edit-zj').checked   = p ? p.zj     : false;
+  document.getElementById('edit-kd').value     = p ? p.kd     : '';
+  document.getElementById('edit-jl').value     = p ? p.jl     : '';
+  document.getElementById('edit-preview').style.display = 'none';
+  document.getElementById('edit-form').style.display = '';
+  const key = ck.split('|')[1];
+  showMsg('msg-edit', p ? 'ok' : 'warn',
+    p ? `✓ 找到 ${dt} ${key}：mag=${p.mag}, brk=${p.brk}, ${p.period}`
+      : `⚠️ ${dt} 無 ${key} 數據（將嘗試填入 mt 格）`);
+}
+
+function autoComputeEditKd() {
+  const ck     = document.getElementById('edit-asset').value;
+  const dt     = document.getElementById('edit-date').value;
+  const mag    = +document.getElementById('edit-mag').value;
+  const brk    = +document.getElementById('edit-brk').value;
+  const period = normPeriod(document.getElementById('edit-period').value.trim());
+  if (!period || isNaN(mag) || isNaN(brk)) { showMsg('msg-edit','warn','請先填入 mag / brk / 期別'); return; }
+  const savedDate = date; date = dt;
+  const r = computeKdJl(ck, mag, brk, period);
+  date = savedDate;
+  document.getElementById('edit-kd').value = r.kd;
+  document.getElementById('edit-jl').value = r.jl;
+  showMsg('msg-edit','ok',`自動計算：kd-${r.kd||'無'} / JL=${r.jl||'無'}`);
+}
+
+function makeManualCell(ck, dt, mag, brk, period, price, zj, kd, jl) {
+  const isJin = period.startsWith('進場期');
+  const base  = isJin ? (brk>200?'jin-hot':'jin') : (brk>=0?'tui-pos':'tui-neg');
+  const zjp   = zj ? (isJin?'zj-jin ':'zj-tui ') : '';
+  const kds   = kd ? ` kd-${kd}` : '';
+  const cbCls = brk>200?'hot':(brk>=0?'pos':'neg');
+  const brkD  = brk>=0?`+${brk}`:String(brk);
+  const pm    = period.match(/^([進退])場期(D\d+)$/);
+  const cp    = pm ? pm[1]+pm[2] : period;
+  const te    = kd==='jin-tp'?'【做多止盈】':(kd==='tui-tp'?'【做空止盈】':'');
+  const key   = ck.split('|')[1];
+  const title = `${dt} ${key}: mag=${mag}, brk=${brkD}, ${period}${te}`;
+  const lieJl = new Set(['劣進','劣退','止盈多','止盈空']);
+  const jlDiv = jl ? `\n          <div class="jl ${lieJl.has(jl)?'lie':'yu'}">${jl}</div>` : '';
+  return `        <td class="${zjp}${base}${kds}" data-ck="${ck}" title="${title}">\n` +
+         `          <div class="cp">${cp}</div>\n` +
+         `          <div class="cv">${mag}</div>\n` +
+         `          <div class="cb ${cbCls}">${brkD}</div>\n` +
+         `          <div class="pr">${price}</div>${jlDiv}\n` +
+         `        </td>`;
+}
+
+function previewEditCell() {
+  const ck     = document.getElementById('edit-asset').value;
+  const dt     = document.getElementById('edit-date').value;
+  const mag    = +document.getElementById('edit-mag').value;
+  const brk    = +document.getElementById('edit-brk').value;
+  const period = normPeriod(document.getElementById('edit-period').value.trim());
+  const price  = document.getElementById('edit-price').value.trim();
+  const zj     = document.getElementById('edit-zj').checked;
+  const kd     = document.getElementById('edit-kd').value.trim();
+  const jl     = document.getElementById('edit-jl').value.trim();
+  if (!period || isNaN(mag) || !mag || isNaN(brk) || !dt) { showMsg('msg-edit','warn','請先填好所有必填欄位'); return; }
+  const cell = makeManualCell(ck, dt, mag, brk, period, price, zj, kd, jl);
+  const prev = document.getElementById('edit-preview');
+  prev.textContent = cell;
+  prev.style.display = '';
+}
+
+async function saveEditCell() {
+  const ck     = document.getElementById('edit-asset').value;
+  const dt     = document.getElementById('edit-date').value;
+  const mag    = +document.getElementById('edit-mag').value;
+  const brk    = +document.getElementById('edit-brk').value;
+  const period = normPeriod(document.getElementById('edit-period').value.trim());
+  const price  = document.getElementById('edit-price').value.trim();
+  const zj     = document.getElementById('edit-zj').checked;
+  const kd     = document.getElementById('edit-kd').value.trim();
+  const jl     = document.getElementById('edit-jl').value.trim();
+  if (!ck || !dt)                              { showMsg('msg-edit','err','請選擇資產和日期'); return; }
+  if (isNaN(mag)||!mag||isNaN(brk)||!period)  { showMsg('msg-edit','err','場外指數、爆破指數、進退場期必填'); return; }
+  if (!html)                                   { showMsg('msg-edit','err','請先連線 GitHub'); return; }
+  document.getElementById('btn-save-edit').disabled = true;
+  showMsg('msg-edit','warn','處理中...');
+  const newCell = makeManualCell(ck, dt, mag, brk, period, price, zj, kd, jl);
+  let h = html;
+  // Strategy 1: replace existing cell that has matching data-ck + date title
+  const marker = `data-ck="${ck}" title="${dt} `;
+  const mIdx   = h.indexOf(marker);
+  if (mIdx !== -1) {
+    const tdStart = h.lastIndexOf('<td', mIdx);
+    const tdEnd   = h.indexOf('</td>', mIdx) + 5;
+    const start   = (tdStart > 0 && h[tdStart-1] === '\n') ? tdStart - 1 : tdStart;
+    h = h.slice(0, start) + '\n' + newCell + h.slice(tdEnd);
+  } else {
+    // Strategy 2: fill the mt cell at this date's column in this asset's row
+    const theadStart = h.indexOf('<thead>');
+    const theadEnd   = h.indexOf('</thead>');
+    const thParts    = h.slice(theadStart, theadEnd).split('</th>');
+    let colIdx = -1;
+    for (let i = 0; i < thParts.length; i++) {
+      if (thParts[i].includes(`title="${dt}"`)) { colIdx = i; break; }
+    }
+    if (colIdx === -1) {
+      showMsg('msg-edit','err',`找不到 ${dt} 的欄位（此日期在 thead 中不存在）`);
+      document.getElementById('btn-save-edit').disabled = false; return;
+    }
+    const rowId  = `id="row_${ck.replace('|','_')}"`;
+    const rowIdx = h.indexOf(rowId);
+    if (rowIdx === -1) {
+      showMsg('msg-edit','err','找不到 ' + ck + ' 的 row');
+      document.getElementById('btn-save-edit').disabled = false; return;
+    }
+    const trStart   = h.lastIndexOf('<tr', rowIdx);
+    const nextTrPos = h.indexOf('<tr', trStart + 3);
+    const trEnd     = nextTrPos !== -1 ? nextTrPos : h.indexOf('</tbody>');
+    const rowHtml   = h.slice(trStart, trEnd);
+    const tdParts   = rowHtml.split('</td>');
+    if (colIdx >= tdParts.length) {
+      showMsg('msg-edit','err',`欄位索引 ${colIdx} 超出 row 範圍 (${tdParts.length})`);
+      document.getElementById('btn-save-edit').disabled = false; return;
+    }
+    if (!tdParts[colIdx].includes('"mt"') && !tdParts[colIdx].includes('"mt ')) {
+      showMsg('msg-edit','warn',`td[${colIdx}] 非 mt 格，已強制覆蓋`);
+    }
+    tdParts[colIdx] = '\n' + newCell;
+    const newRowHtml = tdParts.join('</td>');
+    h = h.slice(0, trStart) + newRowHtml + h.slice(trEnd);
+  }
+  try {
+    await ghWrite('index.html', h,
+      `Mag manual edit: ${dt} ${ck.split('|')[1]}`,
+      msg => document.getElementById('prog-edit').textContent = msg);
+    html = h;
+    document.getElementById('prog-edit').textContent = '';
+    showMsg('msg-edit','ok',`✓ 已更新 ${dt} ${ck.split('|')[1]}`);
+  } catch(e) {
+    showMsg('msg-edit','err','❌ '+e.message);
+    document.getElementById('prog-edit').textContent = '';
+  }
+  document.getElementById('btn-save-edit').disabled = false;
 }
 
 // ── UI ────────────────────────────────────────────────────────────────────────
