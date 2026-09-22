@@ -1029,7 +1029,7 @@ function setupEditAssets() {
 function parseExistingCellFromHtml(ck, dt) {
   const ticker = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(
-    `<td class="([^"]*)" data-ck="${ck.replace('|','\\|')}"[^>]*title="${dt} ${ticker}: mag=([\\d.]+), brk=([+\\-]?[\\d.]+), ([^"【]+)(?:【([^"]+)】)?"`,
+    `<td class="([^"]*)"(?:\\s+data-ck="[^"]*")?[^>]*title="${dt} ${ticker}: mag=([\\d.]+), brk=([+\\-]?[\\d.]+), ([^"【]+)(?:【([^"]+)】)?"`,
     'i'
   );
   const m = re.exec(html);
