@@ -1144,16 +1144,35 @@ async function saveEditCell() {
   showMsg('msg-edit','warn','處理中...');
   const newCell = makeManualCell(ck, dt, mag, brk, period, price, zj, kd, jl);
   let h = html;
-  // Strategy 1: replace existing cell that has matching data-ck + date title
+  // Strategy 1: replace existing cell with matching data-ck + date title
   const marker = `data-ck="${ck}" title="${dt} `;
-  const mIdx   = h.indexOf(marker);
+  let mIdx = h.indexOf(marker);
+
+  // Strategy 1b: for cells without data-ck (e.g. BTC/ETH/SOL inline cells),
+  // find by title within the asset's row (avoids inserting a duplicate cell)
+  if (mIdx === -1) {
+    const rowId1b  = `id="row_${ck.replace('|','_')}"`;
+    const rowIdx1b = h.indexOf(rowId1b);
+    if (rowIdx1b !== -1) {
+      const trS1b  = h.lastIndexOf('<tr', rowIdx1b);
+      const nxtS1b = h.indexOf('<tr', trS1b + 3);
+      const trE1b  = nxtS1b !== -1 ? nxtS1b : h.indexOf('</tbody>');
+      const rowSec = h.slice(trS1b, trE1b);
+      const tmRel  = rowSec.indexOf(`title="${dt} `);
+      if (tmRel !== -1) mIdx = trS1b + tmRel;
+    }
+  }
+
   if (mIdx !== -1) {
+    // Existing cell found — replace it in place
     const tdStart = h.lastIndexOf('<td', mIdx);
     const tdEnd   = h.indexOf('</td>', mIdx) + 5;
     const start   = (tdStart > 0 && h[tdStart-1] === '\n') ? tdStart - 1 : tdStart;
     h = h.slice(0, start) + '\n' + newCell + h.slice(tdEnd);
   } else {
-    // Strategy 2: fill the mt cell at this date's column in this asset's row
+    // Strategy 2: fill the mt cell at this date's column in this asset's row.
+    // Use <td matchAll (NOT split('</td>')) — the split is unreliable because some
+    // rows have extra </td> artifacts that shift the split index.
     const theadStart = h.indexOf('<thead>');
     const theadEnd   = h.indexOf('</thead>');
     const thParts    = h.slice(theadStart, theadEnd).split('</th>');
@@ -1175,16 +1194,19 @@ async function saveEditCell() {
     const nextTrPos = h.indexOf('<tr', trStart + 3);
     const trEnd     = nextTrPos !== -1 ? nextTrPos : h.indexOf('</tbody>');
     const rowHtml   = h.slice(trStart, trEnd);
-    const tdParts   = rowHtml.split('</td>');
-    if (colIdx >= tdParts.length) {
-      showMsg('msg-edit','err',`欄位索引 ${colIdx} 超出 row 範圍 (${tdParts.length})`);
+    // Count <td openings — reliable even when extra </td> artifacts exist
+    const tdMatches = [...rowHtml.matchAll(/<td/g)];
+    if (colIdx >= tdMatches.length) {
+      showMsg('msg-edit','err',`欄位索引 ${colIdx} 超出 row 範圍 (${tdMatches.length})`);
       document.getElementById('btn-save-edit').disabled = false; return;
     }
-    if (!tdParts[colIdx].includes('"mt"') && !tdParts[colIdx].includes('"mt ')) {
+    const tdRelStart = tdMatches[colIdx].index;
+    const tdRelEnd   = rowHtml.indexOf('</td>', tdRelStart) + 5;
+    const existCell  = rowHtml.slice(tdRelStart, tdRelEnd);
+    if (!existCell.includes('"mt"') && !existCell.includes('"mt ')) {
       showMsg('msg-edit','warn',`td[${colIdx}] 非 mt 格，已強制覆蓋`);
     }
-    tdParts[colIdx] = '\n' + newCell;
-    const newRowHtml = tdParts.join('</td>');
+    const newRowHtml = rowHtml.slice(0, tdRelStart) + newCell + rowHtml.slice(tdRelEnd);
     h = h.slice(0, trStart) + newRowHtml + h.slice(trEnd);
   }
   try {
