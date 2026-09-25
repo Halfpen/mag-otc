@@ -890,7 +890,7 @@ async function fetchPriceAtTime(sym, src, startMs) {
 function fmtPrice(p, src) {
   if (p === null || isNaN(p)) return null;
   if (src==='YAHOO_KRW') { const v=p/1000; return (v===Math.floor(v)?v.toFixed(0):v.toFixed(1))+'k'; }
-  if (p>0 && p<0.0001) return p.toFixed(6);
+  if (p>0 && p<0.0001) return p.toFixed(9);
   if (p>0 && p<0.01)   return p.toPrecision(3);
   return parseFloat(p.toPrecision(6)).toString();
 }
