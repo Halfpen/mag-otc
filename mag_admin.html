@@ -124,7 +124,7 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
   </div>
   <div id="price-wrap">
     <table>
-      <thead><tr><th style="width:88px">資產</th><th style="width:68px">來源</th><th style="width:140px">價格</th><th>狀態</th></tr></thead>
+      <thead><tr><th style="width:88px">資產</th><th style="width:68px">來源</th><th style="width:140px">價格</th><th>狀態</th><th>距高點</th></tr></thead>
       <tbody id="price-body"></tbody>
     </table>
   </div>
@@ -824,9 +824,57 @@ function buildPriceTable() {
       `<td style="color:#475569;font-size:11px">${src}</td>` +
       `<td><input type="text" id="pr-${id}" value="${def}" ` +
         `style="width:128px;background:#0f1117;border:1px solid #374151;border-radius:4px;color:#e2e8f0;padding:4px 7px;font-size:12px"></td>` +
-      `<td id="ps-${id}" style="font-size:11px;color:#475569">—</td>`;
+      `<td id="ps-${id}" style="font-size:11px;color:#475569">—</td>` +
+      `<td id="dd-${id}" style="font-size:11px;color:#475569;white-space:nowrap">—</td>`;
     tb.appendChild(tr);
+    tr.querySelector('input').addEventListener('input', () => ddPreview(ck));
+    ddPreview(ck);
   });
+}
+
+// ── 距高點預覽（與 index.html #ddhigh 同口徑：進場期內網站價最高點、日曆日、創新高歸零）──
+function ddPx(t) {
+  t = (t || '').trim(); if (!t || t.includes('---')) return NaN;
+  const k = /k$/i.test(t) ? 1e3 : (/m$/i.test(t) ? 1e6 : 1);
+  const v = parseFloat(t.replace(/[^\d.\-]/g, ''));
+  return isNaN(v) || v <= 0 ? NaN : v * k;
+}
+function ddPreview(ck) {
+  const id = ck.replace('|', '_'), out = document.getElementById('dd-' + id);
+  if (!out) return;
+  const set = (txt, col) => { out.textContent = txt; out.style.color = col; };
+  const tk = ck.split('|')[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // 今日期間：先用②解析結果，否則讀 html 內今日格
+  let period = (rows.find(r => r.ck === ck) || {}).period || '';
+  if (!period) {
+    const m = new RegExp(`title="${date} ${tk}: [^"]*?((?:進|退)場期D\\d+)`).exec(html);
+    if (m) period = m[1];
+  }
+  if (!period.startsWith('進場期')) return set('—', '#475569');
+  const dT = getDN(period);
+  // 只掃該行
+  let src = html;
+  const a = html.indexOf(`<tr id="row_${id}"`);
+  if (a >= 0) src = html.slice(a, html.indexOf('</tr>', a));
+  const re = new RegExp(`title="(\\d{4}-\\d{2}-\\d{2}) ${tk}: [^"]*?(進|退)場期D(\\d+)[^"]*"[^>]*>[\\s\\S]*?<div class="pr">([^<]*)</div>`, 'g');
+  const cells = []; let m, seg = -1, pPh = null, pD = 0;
+  while ((m = re.exec(src)) !== null) {
+    if (m[1] >= date) break;
+    const ph = m[2], d = +m[3];
+    if (ph !== pPh || d <= pD) seg++;
+    pPh = ph; pD = d;
+    cells.push({ date: m[1], ph, d, seg, p: ddPx(m[4]) });
+  }
+  const last = cells[cells.length - 1];
+  const cont = last && last.ph === '進' && dT > last.d;   // 今日延續同一進場期
+  let hi = null, hiDate = null;
+  if (cont) cells.filter(c => c.seg === last.seg && !isNaN(c.p)).forEach(c => { if (hi === null || c.p > hi) { hi = c.p; hiDate = c.date; } });
+  const p = ddPx(document.getElementById('pr-' + id)?.value);
+  if (isNaN(p)) return set(hi === null ? '（新進場期）' : `高 ${hi}（${hiDate.slice(5)}）`, '#64748b');
+  if (hi === null || p > hi) return set('▲新高', '#34d399');
+  const n = Math.round((Date.parse(date) - Date.parse(hiDate)) / 864e5);
+  const dd = (p / hi - 1) * 100;
+  set(`↓${n}日 ${dd.toFixed(1)}%（高 ${hi}）`, dd > -5 ? '#a3a3a3' : (dd > -10 ? '#fbbf24' : '#f87171'));
 }
 
 // ── 時間選擇器 ───────────────────────────────────────────────────────────────
@@ -950,6 +998,7 @@ async function fetchAllPrices() {
       }
       const fmt = fmtPrice(price, src);
       document.getElementById('pr-'+id).value = fmt || '';
+      ddPreview(ck);
       if (fmt) {
         if (st) { st.textContent='✓'; st.style.color='#34d399'; }
         ok++;

@@ -18634,4 +18634,61 @@ function hideAll_A(){document.querySelectorAll('tbody tr[id^="row_"]').forEach(r
 function upd(){document.getElementById('hc').textContent=HA.size>0?`已隱藏 ${HA.size} 項`:'';}
 showR(60);
 setTimeout(function(){var wrap=document.querySelector('.wrap');var ths=document.querySelectorAll('thead th.today');var th=ths[ths.length-1];if(wrap&&th){wrap.scrollLeft=Math.max(0,th.offsetLeft+th.offsetWidth-wrap.clientWidth+16);}},0);
-</script></body></html>
+</script><script id="ddhigh">
+/* 進場期「距高點」顯示（純顯示，不改任何數據）
+   - 只計 2026-09-29 當日仍在進行、或之後開始的進場期（DDH_FROM）
+   - 高點 = 該進場期內網站價（.pr）的最高收錄價；D1 價為起點
+   - 天數 = 距高點的日曆日（與網站 Dn 同口徑）；創新高 → 歸零，顯示「▲新高」 */
+(function(){
+  var DDH_FROM='2026-09-29';
+  var css=document.createElement('style');
+  css.textContent='.ddh{font-size:8px;line-height:1.2;font-weight:700;letter-spacing:0.1px;white-space:nowrap}'+
+    '.ddh.nh{color:#34d399}.ddh.d1{color:#a3a3a3}.ddh.d2{color:#fbbf24}.ddh.d3{color:#f87171}';
+  document.head.appendChild(css);
+  function px(t){
+    t=(t||'').trim(); if(!t||t.indexOf('---')>=0) return NaN;
+    var k=/k$/i.test(t)?1e3:(/m$/i.test(t)?1e6:1);
+    var v=parseFloat(t.replace(/[^\d.\-]/g,''));
+    return isNaN(v)||v<=0?NaN:v*k;
+  }
+  var RE=/^(\d{4}-\d{2}-\d{2}) [^:]+: [^,]*,[^,]*, (進|退)場期D(\d+)/;
+  function dayMs(s){return Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10));}
+  function run(){
+    document.querySelectorAll('.ddh').forEach(function(e){e.remove();});
+    document.querySelectorAll('#T tbody tr[id^="row_"]').forEach(function(tr){
+      // 1) 收集有數據的格，按進／退與 Dn 切分期
+      var cells=[],prevPh=null,prevD=0,seg=-1;
+      [].forEach.call(tr.cells,function(td){
+        var m=RE.exec(td.getAttribute('title')||''); if(!m) return;
+        var ph=m[2],d=+m[3];
+        if(ph!==prevPh||d<=prevD) seg++;
+        prevPh=ph; prevD=d;
+        cells.push({td:td,date:m[1],ph:ph,seg:seg});
+      });
+      // 2) 每個進場期：最後一格日期 >= DDH_FROM 才顯示
+      var last={}; cells.forEach(function(c){last[c.seg]=c.date;});
+      var hi=null,hiDate=null,curSeg=-1;
+      cells.forEach(function(c){
+        if(c.ph!=='進'||last[c.seg]<DDH_FROM) return;
+        if(c.seg!==curSeg){curSeg=c.seg;hi=null;hiDate=null;}
+        var prDiv=c.td.querySelector('.pr'); if(!prDiv) return;
+        var p=px(prDiv.textContent); if(isNaN(p)) return;
+        var el=document.createElement('div'); el.className='ddh';
+        if(hi===null||p>hi){
+          hi=p; hiDate=c.date; el.className+=' nh'; el.textContent='▲新高';
+        }else{
+          var n=Math.round((dayMs(c.date)-dayMs(hiDate))/864e5);
+          var dd=(p/hi-1)*100;
+          el.className+=dd>-5?' d1':(dd>-10?' d2':' d3');
+          el.textContent='↓'+n+'日 '+dd.toFixed(1)+'%';
+          el.title='高點 '+hiDate+'（'+prDiv.textContent.trim()+' vs 高 '+hi+'）';
+        }
+        prDiv.insertAdjacentElement('afterend',el);
+      });
+    });
+  }
+  run();
+  window.ddhRun=run;
+})();
+</script>
+</body></html>
