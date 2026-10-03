@@ -576,10 +576,14 @@ function getCellHistory(ck) {
 // 退D1 → 最近的「退場期KD」與「進場期brk<0→≥0當天」取時間更近者
 function getD1RefMag(ck, isJin) {
   const cells = getCellHistory(ck);
-  let lastJinKd=null, lastTuiKd=null, lastTuiDrop200=null, lastJinNegPos=null, prevB=null;
+  let lastJinKd=null, lastTuiKd=null, lastTuiDrop200=null, lastJinNegPos=null, prevB=null, pJ=null;
   for (const c of cells) {
     const cJin = c.period.startsWith('進場期'), day = getDN(c.period);
-    if (day === 1) {
+    // 代替 D1：期間第一格不是 D1（網站缺了 D1 那一欄），而且本身不是 Dn 關鍵日 → 當 D1 用
+    const subD1 = day !== 1 && pJ !== null && pJ !== cJin &&
+      !((cJin && prevB>200 && c.brk<=200) || (!cJin && prevB<0 && c.brk>=0));
+    pJ = cJin;
+    if (day === 1 || subD1) {
       if (cJin) lastJinKd = { date:c.date, mag:c.mag };
       else lastTuiKd = { date:c.date, mag:c.mag };
     } else if (prevB !== null) {
@@ -604,9 +608,12 @@ function getLastKdInCurrentPeriod(ck, isJin) {
   let lastMag=null, prevB=null, curJin=null;
   for (const c of cells) {
     const cJin = c.period.startsWith('進場期'), day = getDN(c.period);
+    const sw = curJin !== null && curJin !== cJin;      // 期間剛切換的第一格
+    const subD1 = day !== 1 && sw &&
+      !((cJin && prevB>200 && c.brk<=200) || (!cJin && prevB<0 && c.brk>=0));
     if (curJin !== cJin) { curJin = cJin; if (cJin !== isJin) lastMag = null; }
     if (cJin === isJin) {
-      if (day === 1) lastMag = c.mag;
+      if (day === 1 || subD1) lastMag = c.mag;
       else if (prevB !== null) {
         if (isJin && prevB>200 && c.brk<=200) lastMag = c.mag;
         else if (!isJin && prevB<0 && c.brk>=0) lastMag = c.mag;
@@ -1265,6 +1272,27 @@ async function saveEditCell() {
     html = h;
     document.getElementById('prog-edit').textContent = '';
     showMsg('msg-edit','ok',`✓ 已更新 ${dt} ${ck.split('|')[1]}`);
+    // 2026-10-03：手工修改同步 data.json（以前只改 index.html，data.json 會留舊標籤）
+    try {
+      const data = await ghReadDataJson();
+      if (!data.rows[ck]) data.rows[ck] = {};
+      const e = { ...(data.rows[ck][dt] || {}), mag, brk, period };
+      if (kd) e.kd = kd; else delete e.kd;
+      if (jl) e.jl = jl; else delete e.jl;
+      const pv = price.replace(/[^\d.k]/gi, '');
+      const pn = /k$/i.test(pv) ? parseFloat(pv) * 1000 : parseFloat(pv);
+      if (!isNaN(pn) && pn > 0) e.price = pn;
+      data.rows[ck][dt] = e;
+      if (!data.cols.includes(dt)) { data.cols.push(dt); data.cols.sort(); }
+      await ghWrite('data.json', JSON.stringify(data, null, 2),
+        `Mag data.json manual edit: ${dt} ${ck.split('|')[1]}`,
+        msg => document.getElementById('prog-edit').textContent = msg);
+      document.getElementById('prog-edit').textContent = '';
+      showMsg('msg-edit','ok',`✓ 已更新 ${dt} ${ck.split('|')[1]}（index.html＋data.json）`);
+    } catch(e2) {
+      document.getElementById('prog-edit').textContent = '';
+      showMsg('msg-edit','warn',`✓ index.html 已更新，但 data.json 同步失敗：${e2.message}`);
+    }
   } catch(e) {
     showMsg('msg-edit','err','❌ '+e.message);
     document.getElementById('prog-edit').textContent = '';
