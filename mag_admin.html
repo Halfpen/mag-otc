@@ -224,6 +224,7 @@ const ASSETS = [
   ['coins|PUMP',   'PUMP',        'PUMP',      'PUMPUSDT',  'BINANCE'],
   ['coins|ZEC',    'ZEC',         'ZEC',       'ZECUSDT',   'BINANCE'],
   ['coins|UNI',    'UNI',         'UNI',       'UNIUSDT',   'BINANCE'],
+  ['coins|AAVE',   'AAVE',        'AAVE',      'AAVEUSDT',  'BINANCE'],
   ['macro|NASDAQ_OTC',  'NASDAQ_OTC', 'NASDAQ_OTC','QQQUSDT',   'BYBIT_LINEAR'],
   ['macro|BTC_VEGA',    'BTC_VEGA',  'BTC_VEGA',  null,        'EMPTY'],
   ['stocks|SPCX',  'SPCX',   'SPCX',   'SPCXUSDT',  'BYBIT_LINEAR'],
@@ -267,7 +268,7 @@ const NAME_TO_CK = {
   'DOGE':'coins|DOGE','狗狗币':'coins|DOGE',
   'LTC':'coins|LTC','莱特币':'coins|LTC','Litecoin':'coins|LTC',
   'SUI':'coins|SUI','PEPE':'coins|PEPE','HYPE':'coins|HYPE',
-  'TRUMP':'coins|TRUMP','PUMP':'coins|PUMP','ZEC':'coins|ZEC','UNI':'coins|UNI',
+  'TRUMP':'coins|TRUMP','PUMP':'coins|PUMP','ZEC':'coins|ZEC','UNI':'coins|UNI','AAVE':'coins|AAVE',
   'NASDAQ_OTC':'macro|NASDAQ_OTC','纳斯达克OTC':'macro|NASDAQ_OTC',
   '纳斯达克':'macro|NASDAQ_OTC','NASDAQ':'macro|NASDAQ_OTC',
   'BTC_VEGA':'macro|BTC_VEGA','BTCVEGA':'macro|BTC_VEGA','比特币VEGA':'macro|BTC_VEGA',
@@ -727,6 +728,13 @@ function buildNewHtml() {
     }
   }
 
+  // Step 1b（2026-10-04）: 清除今天日期的空格佔位（重跑同一日時不會重複）
+  {
+    const ph = `<td class="mt" data-d="${date}"></td>`;
+    while (h.includes('\n        ' + ph)) h = h.replace('\n        ' + ph, '');
+    while (h.includes(ph)) h = h.replace(ph, '');
+  }
+
   // Step 2: 清除 thead 中今天日期的 th（含重複）
   const thPlain = `<th title="${date}">${label}</th>`;
   const thToday = `<th class="today" title="${date}">${label}</th>`;
@@ -745,21 +753,22 @@ function buildNewHtml() {
   }
 
   // Step 4: 插入今天的新 cells
+  // 2026-10-04：新格一律加在該行最尾（最後一個 </td> 之後）；當日沒有數據的標的補一個空格佔位。
+  //   以前沒有數據就不加格，之後的格會向左錯位（BTC_VEGA 2026-07 起移了 2 欄）。
   for (const row of rows) {
-    if (row.mag === '') continue;
-    const anchor = `data-ck="${row.ck}"`;
-    const last   = h.lastIndexOf(anchor);
-    let pos;
-    if (last === -1) {
-      // 全新標（尚無歷史數據）：定位到對應 tr 的結尾
-      const rowId  = `id="row_${row.ck.replace('|', '_')}"`;
-      const rowIdx = h.indexOf(rowId);
-      if (rowIdx === -1) throw new Error('找不到 anchor: ' + row.ck);
-      pos = h.indexOf('</tr>', rowIdx);
-    } else {
-      pos = h.indexOf('</td>', last) + 5;
+    const rowId  = `id="row_${row.ck.replace('|', '_')}"`;
+    const rowIdx = h.indexOf(rowId);
+    if (rowIdx === -1) {
+      if (row.mag === '') continue;
+      throw new Error('找不到 row: ' + row.ck + '（index.html 未有這一行）');
     }
-    h = h.slice(0, pos) + '\n' + makeCell(row) + h.slice(pos);
+    const nextTr = h.indexOf('<tr', rowIdx);
+    const rowEnd = nextTr !== -1 ? nextTr : h.indexOf('</tbody>', rowIdx);
+    const lastTd = h.lastIndexOf('</td>', rowEnd);
+    if (lastTd < rowIdx) throw new Error('row 結構異常: ' + row.ck);
+    const pos  = lastTd + 5;
+    const cell = row.mag === '' ? `        <td class="mt" data-d="${date}"></td>` : makeCell(row);
+    h = h.slice(0, pos) + '\n' + cell + h.slice(pos);
   }
 
   // Step 5: 插入新的 today-th
