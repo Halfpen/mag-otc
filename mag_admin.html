@@ -105,6 +105,7 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
     </table>
   </div>
   <div id="kd-events" style="margin-top:10px"></div>
+  <div id="liq-box" style="margin-top:10px;font-size:12px;color:#94a3b8"></div>
   <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
     <button class="btn-o" onclick="recompute()">🔄 重算 KD</button>
     <button class="btn-g" onclick="commitData()" id="btn-commit">💾 寫入 GitHub</button>
@@ -325,6 +326,7 @@ let EXTRA  = { assets: [] };   // assets_extra.json 的內容
 let UNK    = [];               // 本次貼文裡未識別的標的 [{name,text,mag,brk,period}]
 let DUP    = [];               // 同一標的出現多於一次 [{ck,text}]
 let unkAck = false;            // 已按「略過未識別」
+let LIQ    = null;             // 2026-10-07：本次貼文的「流動性概況」{coins,net,inner,outer,dir,raw}
 
 async function ghReadExtra() {
   const r = await ghReq(`/repos/${REPO}/contents/${EXTRA_PATH}?ref=${BRANCH}`, { cache: 'no-store' });
@@ -389,6 +391,49 @@ function groupLines(rawLines) {
     if (!isMag) pending = line;
   }
   return { groups, unknown };
+}
+
+// ── 2026-10-07：流動性概況（場內資金／淨資金／場內外方向），只寫入 data.json 的 liq 欄 ──
+const LIQ_NAME = { '比特币':'BTC','比特幣':'BTC','大饼':'BTC','以太坊':'ETH','以太':'ETH','姨太':'ETH' };
+function liqNum(numStr, unit) {
+  let v = parseFloat(numStr.replace(/[－−–—]/g, '-').replace(/＋/g, '+').replace(/\s+/g, ''));
+  if (isNaN(v)) return null;
+  if (/[万萬]/.test(unit || '')) v = v / 10000;          // 統一以「億美元」為單位
+  return Math.round(v * 1e6) / 1e6;
+}
+function parseLiq(raw) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const NUM = '([+\\-－−–—＋]?\\s*\\d+(?:\\.\\d+)?)\\s*([亿億万萬]?)';
+  const reCoin = new RegExp('^([A-Za-z\\u4e00-\\u9fa5]+?)\\s*[场場][内內][资資]金\\s*' + NUM);
+  const reNet  = new RegExp('[净淨][资資]金\\s*' + NUM);
+  const out = { coins: {}, net: null, inner: '', outer: '', dir: '', raw: [] };
+  for (const line of lines) {
+    let hit = false, m;
+    if (/流[动動]性概[况況]|日[内內]短[线線]/.test(line) && line.length < 30) hit = true;
+    if ((m = line.match(reCoin))) {
+      const nm = LIQ_NAME[m[1]] || m[1].toUpperCase(), v = liqNum(m[2], m[3]);
+      if (v !== null) { out.coins[nm] = v; hit = true; }
+    } else if (/流[动動]性/.test(line) && (m = line.match(reNet))) {
+      const v = liqNum(m[1], m[2]); if (v !== null) { out.net = v; hit = true; }
+    }
+    if (!/[场場]外指/.test(line)) {
+      if ((m = line.match(/[场場][内內]\s*(流入|流出)/))) { out.inner = m[1]; hit = true; }
+      if ((m = line.match(/[场場]外\s*(流入|流出)/)))     { out.outer = m[1]; hit = true; }
+      if ((m = line.match(/[资資]金方向\s*(相同|相反)/))) { out.dir = m[1]; hit = true; }
+    }
+    if (hit) out.raw.push(line);
+  }
+  if (!Object.keys(out.coins).length && out.net === null) return null;
+  return out;
+}
+function renderLiq() {
+  const box = document.getElementById('liq-box'); if (!box) return;
+  if (!LIQ) { box.innerHTML = '流動性概況：今日貼文沒有這段（不影響寫入）'; return; }
+  const sg = v => (v > 0 ? '+' : '') + v;
+  const coins = Object.entries(LIQ.coins).map(([k, v]) => `${escH(k)} <b style="color:${v < 0 ? '#f87171' : '#4ade80'}">${sg(v)}</b>`).join('　');
+  box.innerHTML = `流動性概況（億美元，會一併寫入 data.json）：${coins || '—'}` +
+    `　｜淨資金 <b>${LIQ.net === null ? '—' : sg(LIQ.net)}</b>` +
+    `　｜場內${escH(LIQ.inner || '—')}・場外${escH(LIQ.outer || '—')}・方向${escH(LIQ.dir || '—')}`;
 }
 
 function parseFields(text) {
@@ -590,7 +635,7 @@ async function ghReadDataJson() {
 
 // 把新的 patches 合併進 data.json 並寫回 GitHub
 // patches: { [ck]: { mag?, brk?, period?, kd?, jl?, price? } }
-async function patchDataJson(dt, patches, onProgress) {
+async function patchDataJson(dt, patches, onProgress, liq) {
   onProgress?.('讀取 data.json...');
   const data = await ghReadDataJson();
   for (const [ck, fields] of Object.entries(patches)) {
@@ -603,6 +648,7 @@ async function patchDataJson(dt, patches, onProgress) {
     data.rows[ck][dt] = merged;
   }
   if (!data.cols.includes(dt)) { data.cols.push(dt); data.cols.sort(); }
+  if (liq) { if (!data.liq) data.liq = {}; data.liq[dt] = liq; }   // 2026-10-07：流動性概況
   const json = JSON.stringify(data, null, 2);
   await ghWrite('data.json', json, `Mag data.json: ${dt}`, onProgress);
 }
@@ -678,6 +724,7 @@ function parseData() {
   const { groups, unknown } = groupLines(rawLines);
   UNK = unknown.map(u => ({ ...u, ...parseFields(u.text) }));
   DUP = []; unkAck = false;
+  try { LIQ = parseLiq(raw); } catch (e) { LIQ = null; }
 
   const found = new Map();
   for (const { ck, text } of groups) {
@@ -704,6 +751,7 @@ function parseData() {
   });
   renderTable();
   renderKdEvents();
+  renderLiq();
   setStep(3);
   show('c3');
 }
@@ -993,7 +1041,7 @@ async function commitData() {
         patches[row.ck] = rec;
       });
       await patchDataJson(date, patches,
-        msg => document.getElementById('prog3').textContent = msg);
+        msg => document.getElementById('prog3').textContent = msg, LIQ);
       document.getElementById('prog3').textContent = '';
     } catch(e) {
       document.getElementById('prog3').textContent = '⚠️ data.json: ' + e.message;
