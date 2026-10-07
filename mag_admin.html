@@ -934,6 +934,20 @@ function makeCell(row) {
          `        </td>`;
 }
 
+// ── 2026-10-08：把當日「流動性概況」併入 index.html 的 #liq-data（純顯示用；網站據此計本段累計）──
+function putLiqData(h, dt, liq) {
+  try {
+    if (!liq) return h;
+    const open = '<script id="liq-data" type="application/json">';
+    const a = h.indexOf(open); if (a === -1) return h;
+    const b = h.indexOf('</' + 'script>', a); if (b === -1) return h;
+    const obj = JSON.parse(h.slice(a + open.length, b));
+    obj[dt] = { coins: liq.coins, net: liq.net, inner: liq.inner, outer: liq.outer, dir: liq.dir };
+    const sorted = {}; Object.keys(obj).sort().forEach(k => sorted[k] = obj[k]);
+    return h.slice(0, a + open.length) + JSON.stringify(sorted).replace(/</g, '\\u003c') + h.slice(b);
+  } catch (e) { return h; }
+}
+
 function buildNewHtml() {
   let h = html.replace(/\btoday-col /g, '');
   const [mo, dy] = date.slice(5).split('-').map(Number);
@@ -1000,7 +1014,7 @@ function buildNewHtml() {
   const trEnd = h.lastIndexOf('</tr>', tEnd);
   if (trEnd === -1) throw new Error('thead 結構異常');
   h = h.slice(0, trEnd) + `\n        <th class="today" title="${date}">${label}</th>` + h.slice(trEnd);
-  return h;
+  return putLiqData(h, date, LIQ);
 }
 
 // ── 寫入 GitHub ── ③ ──────────────────────────────────────────────────────────
