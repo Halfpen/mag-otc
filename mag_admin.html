@@ -79,7 +79,19 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
   <div class="row-g" style="margin-bottom:10px">
     <div style="flex:0;min-width:155px"><label>日期</label><input type="date" id="inp-date"></div>
   </div>
-  <label>原始數據（貼入 Mag 報告文字）</label>
+  <div class="row-g" style="margin-bottom:6px">
+    <div style="flex:1;min-width:220px"><label>Notion 連結（手機：分享 → 複製連結，貼在這裏）</label><input type="text" id="inp-notion" inputmode="url" autocomplete="off" placeholder="https://xxx.notion.site/…"></div>
+    <div style="flex:0"><button class="btn-p" onclick="loadNotion()" id="btn-notion">📥 讀取</button></div>
+  </div>
+  <div id="notion-msg" style="font-size:11px;color:#64748b;margin-bottom:6px"></div>
+  <details style="margin-bottom:10px;font-size:12px;color:#94a3b8"><summary style="cursor:pointer">設定 Notion 中轉站（只需設一次，每部裝置各設一次）</summary>
+    <div class="row-g" style="margin-top:6px">
+      <div style="flex:1;min-width:220px"><input type="text" id="inp-relay" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></div>
+      <div style="flex:0"><button class="btn-g" onclick="saveRelay()">儲存</button></div>
+    </div>
+    <div style="margin-top:4px;color:#64748b">貼上「魔方 Notion 中轉站」Apps Script 的網頁應用程式網址。它只讀公開的 notion.site 頁面，不需要密碼。</div>
+  </details>
+  <label>原始數據（貼入 Mag 報告文字，或用上面的 Notion 連結自動填入）</label>
   <textarea id="inp-raw" rows="14" placeholder="BTC 场外指数1900场外进场期第44天 爆破指数238&#10;以太坊 场外指数1872场外进场期第45天 爆破指数229&#10;三星电子 场外指数988场外进场期第2天 爆破指数91 逼近"></textarea>
   <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
     <button class="btn-p" onclick="parseData()">🔍 解析</button>
@@ -1136,6 +1148,42 @@ function ddPreview(ck) {
 }
 
 // ── 時間選擇器 ───────────────────────────────────────────────────────────────
+// ── Notion 連結 → 原文＋發文時間（經 Apps Script 中轉站；2026-10-12 加）────────────
+const RELAY_KEY = 'mag_notion_relay';
+let NOTION_TIME = '';
+function notionMsg(t, c) { const el = document.getElementById('notion-msg'); el.textContent = t; el.style.color = c || '#64748b'; }
+function relayUrl() { try { return localStorage.getItem(RELAY_KEY) || ''; } catch (e) { return ''; } }
+function saveRelay() {
+  const v = document.getElementById('inp-relay').value.trim();
+  if (v && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(v)) { notionMsg('中轉站網址格式不對：應該是 https://script.google.com/macros/s/…/exec', '#f87171'); return; }
+  try { if (v) localStorage.setItem(RELAY_KEY, v); else localStorage.removeItem(RELAY_KEY); } catch (e) {}
+  notionMsg(v ? '已儲存中轉站網址' : '已清除中轉站網址', '#34d399');
+}
+async function loadNotion() {
+  const u = document.getElementById('inp-notion').value.trim(), R = relayUrl(), btn = document.getElementById('btn-notion');
+  if (!R) { notionMsg('請先展開「設定 Notion 中轉站」貼上 Apps Script 網址', '#f87171'); return; }
+  if (!/^https:\/\/[a-z0-9-]+\.notion\.site\//i.test(u)) { notionMsg('請貼 https://xxx.notion.site/… 的連結', '#f87171'); return; }
+  btn.disabled = true; notionMsg('讀取中…（約 2–5 秒）');
+  try {
+    const r = await fetch(R + '?url=' + encodeURIComponent(u));
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.err || '讀取失敗');
+    document.getElementById('inp-raw').value = j.text;
+    const c = new Date(j.created), e = new Date(j.edited);
+    const ukDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(c);
+    const hmOf = (d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+    const hm = hmOf(c), [hh, mm] = hm.split(':').map(Number);
+    NOTION_TIME = String(hh).padStart(2, '0') + ':' + String(Math.floor(mm / 5) * 5).padStart(2, '0');
+    document.getElementById('inp-date').value = ukDate;
+    const sel = document.getElementById('price-time'); if (sel && sel.options.length) sel.value = NOTION_TIME;
+    notionMsg('已讀取 ' + j.blocks + ' 段；發文 ' + ukDate + ' ' + hm + '（英國時間；最後編輯 ' + hmOf(e) + '）。日期已填好，抓價時間會預設為 ' + NOTION_TIME + '。請核對後按「解析」。', '#34d399');
+  } catch (err) {
+    notionMsg('讀取失敗：' + err.message + '（可改為手動貼原文）', '#f87171');
+  }
+  btn.disabled = false;
+}
+window.addEventListener('DOMContentLoaded', () => { const el = document.getElementById('inp-relay'); if (el) el.value = relayUrl(); });
+
 function buildTimeSelect() {
   const sel = document.getElementById('price-time');
   sel.innerHTML = '<option value="">現在（即時）</option>';
@@ -1145,6 +1193,7 @@ function buildTimeSelect() {
       sel.innerHTML += `<option value="${label}">${label}</option>`;
     }
   }
+  if (NOTION_TIME) sel.value = NOTION_TIME;   // 由 Notion 發文時間預設
 }
 
 // 把 date（YYYY-MM-DD）+ 英國時間字串 → UTC 毫秒 timestamp
