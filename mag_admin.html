@@ -567,17 +567,25 @@ function toB64(str) {
   return btoa(bin);
 }
 
+// 2026-10-14：GitHub 讀 ref 會延遲幾秒——寫完 index.html 即時再寫 data.json，第二次會用到舊的 parent，
+// 出現 "Update is not a fast forward"。改為：記住自己剛寫入的 commit（LAST_SHA），讀 ref 時等它出現；
+// 更新 ref 失敗（not a fast forward）就重新讀 ref、重建 commit，最多試 4 次。
+let LAST_SHA = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function headSha() {
+  let s = null;
+  for (let i = 0; i < 8; i++) {
+    const r = await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}?t=${Date.now()}`, { cache: 'no-store' });
+    s = (await r.json()).object?.sha;
+    if (!s) throw new Error('無法取得 ref SHA');
+    if (!LAST_SHA || s === LAST_SHA) return s;
+    await sleep(1000);
+  }
+  return LAST_SHA;   // 仍讀到舊 ref：用自己剛寫入的 commit 作 parent
+}
+
 // Git Data API 寫入（支援任意大小檔案）
 async function ghWrite(path, content, message, onProgress) {
-  onProgress('取得目前 commit...');
-  const ref = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
-  const commitSha = ref.object?.sha;
-  if (!commitSha) throw new Error('無法取得 ref SHA');
-
-  onProgress('取得 tree SHA...');
-  const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
-  const treeSha = commit.tree?.sha;
-
   onProgress('上傳 blob（檔案較大，請稍候）...');
   const blobRes = await ghReq(`/repos/${REPO}/git/blobs`, {
     method: 'POST',
@@ -586,33 +594,42 @@ async function ghWrite(path, content, message, onProgress) {
   if (!blobRes.ok) throw new Error('建立 blob 失敗 ' + blobRes.status);
   const { sha: blobSha } = await blobRes.json();
 
-  onProgress('建立新 tree...');
-  const newTree = await (await ghReq(`/repos/${REPO}/git/trees`, {
-    method: 'POST',
-    body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: '100644', type: 'blob', sha: blobSha }] })
-  })).json();
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    onProgress('取得目前 commit...' + (attempt > 1 ? `（第 ${attempt} 次）` : ''));
+    const commitSha = await headSha();
+    const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
+    const treeSha = commit.tree?.sha;
+    if (!treeSha) throw new Error('無法取得 tree SHA');
 
-  onProgress('建立 commit...');
-  const newCommit = await (await ghReq(`/repos/${REPO}/git/commits`, {
-    method: 'POST',
-    body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] })
-  })).json();
+    onProgress('建立新 tree...');
+    const newTree = await (await ghReq(`/repos/${REPO}/git/trees`, {
+      method: 'POST',
+      body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: '100644', type: 'blob', sha: blobSha }] })
+    })).json();
 
-  onProgress('更新 branch...');
-  const upd = await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ sha: newCommit.sha })
-  });
-  if (!upd.ok) { const e = await upd.json().catch(() => ({})); throw new Error(e.message || '更新 ref 失敗'); }
-  onProgress('');
+    onProgress('建立 commit...');
+    const newCommit = await (await ghReq(`/repos/${REPO}/git/commits`, {
+      method: 'POST',
+      body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] })
+    })).json();
+
+    onProgress('更新 branch...');
+    const upd = await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: newCommit.sha })
+    });
+    if (upd.ok) { LAST_SHA = newCommit.sha; onProgress(''); return newCommit.sha; }
+    const e = await upd.json().catch(() => ({}));
+    if (!/fast.?forward/i.test(e.message || '') || attempt === 4) throw new Error(e.message || '更新 ref 失敗');
+    LAST_SHA = null;                // 有其他 commit 插入：下次重新讀 ref
+    await sleep(1500 * attempt);
+  }
 }
 
 // 透過 Git Data API 讀取 index.html（繞過 raw CDN 快取）
 async function ghReadHtml() {
   // 找 blob SHA
-  const ref    = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
-  const commitSha = ref.object?.sha;
-  if (!commitSha) throw new Error('無法取得 ref SHA');
+  const commitSha = await headSha();
   const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
   const treeSha = commit.tree?.sha;
   const tree   = await (await ghReq(`/repos/${REPO}/git/trees/${treeSha}`)).json();
@@ -630,9 +647,7 @@ async function ghReadHtml() {
 
 // 讀取 data.json blob
 async function ghReadDataJson() {
-  const ref = await (await ghReq(`/repos/${REPO}/git/refs/heads/${BRANCH}`)).json();
-  const commitSha = ref.object?.sha;
-  if (!commitSha) throw new Error('無法取得 ref SHA');
+  const commitSha = await headSha();
   const commit = await (await ghReq(`/repos/${REPO}/git/commits/${commitSha}`)).json();
   const tree   = await (await ghReq(`/repos/${REPO}/git/trees/${commit.tree.sha}`)).json();
   const entry  = tree.tree?.find(e => e.path === 'data.json');
