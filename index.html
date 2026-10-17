@@ -23038,7 +23038,7 @@ setTimeout(function(){var wrap=document.querySelector('.wrap');var ths=document.
       [].forEach.call(tr.cells,function(td){
         var m=RE.exec(td.getAttribute('title')||''); if(!m) return;
         var ph=m[2],d=+m[3];
-        if(ph!==prevPh||d<=prevD) seg++;
+        if(ph!==prevPh||d<prevD) seg++;
         prevPh=ph; prevD=d;
         cells.push({td:td,date:m[1],ph:ph,seg:seg});
       });
@@ -23095,7 +23095,7 @@ setTimeout(function(){var wrap=document.querySelector('.wrap');var ths=document.
       [].forEach.call(tr.cells,function(td){
         var m=RE.exec(td.getAttribute('title')||''); if(!m) return;
         var date=m[1],ph=m[2],d=+m[3];
-        if(ph!==prevPh||d<=prevD){cum=0;n=0;from=null;}
+        if(ph!==prevPh||d<prevD){cum=0;n=0;from=null;}
         prevPh=ph;prevD=d;
         var day=L[date],v=null;
         if(day&&day.coins){Object.keys(day.coins).forEach(function(k){if(k.toUpperCase()===name)v=+day.coins[k];});}
