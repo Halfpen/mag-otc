@@ -451,7 +451,7 @@ function renderLiq() {
 function parseFields(text) {
   const mm = text.match(/场外指数\s*(\d+)/) || text.match(/場外指數\s*(\d+)/)
           || text.match(/场外指\s*(\d+)/)   || text.match(/場外指\s*(\d+)/);
-  const bm = text.match(/爆破指数\s*(-?\d+)/) || text.match(/爆破指數\s*(-?\d+)/);
+  const bm = text.match(/爆破指[数數]?\s*[:：]?\s*(-?\d+)/);
   return { mag: mm ? +mm[1] : null, brk: bm ? +bm[1] : null, period: extractPeriod(text) };
 }
 
@@ -760,7 +760,7 @@ function parseData() {
     // 容錯：允許「场外指数 1172」中的空格，以及「场外指805」缺「数」
     const mm = text.match(/场外指数\s*(\d+)/) || text.match(/場外指數\s*(\d+)/)
             || text.match(/场外指\s*(\d+)/)   || text.match(/場外指\s*(\d+)/);
-    const bm = text.match(/爆破指数\s*(-?\d+)/) || text.match(/爆破指數\s*(-?\d+)/);
+    const bm = text.match(/爆破指[数數]?\s*[:：]?\s*(-?\d+)/);
     const p  = extractPeriod(text);
     if (mm && bm && p)
       found.set(ck, { ck, mag:+mm[1], brk:+bm[1], period:p, zj:/逼近/.test(text), kd:'', jl:'' });
