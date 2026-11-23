@@ -5,7 +5,7 @@
       "name": "TSM",
       "display": "TSM",
       "symbol": "TSMUSDT",
-      "source": "BYBIT",
+      "source": "BYBIT_LINEAR",
       "aliases": [
         "TSM"
       ],
