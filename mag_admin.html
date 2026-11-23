@@ -138,7 +138,7 @@ label{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
   </div>
   <div id="price-wrap">
     <table>
-      <thead><tr><th style="width:88px">資產</th><th style="width:68px">來源</th><th style="width:140px">價格</th><th>狀態</th><th>距高點</th></tr></thead>
+      <thead><tr><th style="width:88px">資產</th><th style="width:124px">來源／交易對</th><th style="width:140px">價格</th><th>狀態</th><th>距高點</th></tr></thead>
       <tbody id="price-body"></tbody>
     </table>
   </div>
@@ -1100,13 +1100,13 @@ function buildPriceTable() {
   buildTimeSelect();
   const tb = document.getElementById('price-body');
   tb.innerHTML = '';
-  ASSETS.forEach(([ck,, d,, src]) => {
+  ASSETS.forEach(([ck,, d, sym, src]) => {
     const id  = ck.replace('|','_');
     const def = src==='CN'?'---':(src==='EMPTY'?'':'');
     const tr  = document.createElement('tr');
     tr.innerHTML =
       `<td><b>${d}</b></td>` +
-      `<td style="color:#475569;font-size:11px">${src}</td>` +
+      `<td style="font-size:11px">${srcCell(ck, sym, src)}</td>` +
       `<td><input type="text" id="pr-${id}" value="${def}" ` +
         `style="width:128px;background:#0f1117;border:1px solid #374151;border-radius:4px;color:#e2e8f0;padding:4px 7px;font-size:12px"></td>` +
       `<td id="ps-${id}" style="font-size:11px;color:#475569">—</td>` +
@@ -1115,6 +1115,72 @@ function buildPriceTable() {
     tr.querySelector('input').addEventListener('input', () => ddPreview(ck));
     ddPreview(ck);
   });
+}
+
+// ── 2026-11-23：④ 每行可改價格來源／交易對 ─────────────────────────────────────
+// 改咗即刻生效（下一次按「📡 抓取」就用新來源）；外置名單（assets_extra.json）的標的可按 💾 永久儲存。
+// 內建標的（ASSETS 原本那批）只限今次，長期要改就改 mag_admin.html 的 ASSETS。
+function srcCell(ck, sym, src) {
+  const id = ck.replace('|','_');
+  const st = 'background:#0f1117;border:1px solid #374151;border-radius:4px;color:#cbd5e1;padding:2px 4px;font-size:11px';
+  const ex = EXTRA.assets.some(a => a.ck === ck && a.source);
+  return `<select id="src-${id}" style="${st};width:118px" onchange="srcChange('${ck}',true)">` +
+    SOURCES.map(s => `<option value="${s}"${s === src ? ' selected' : ''}>${s}</option>`).join('') + `</select>` +
+    `<input type="text" id="sym-${id}" value="${escH(sym || '')}" placeholder="交易對／代碼" ` +
+      `style="${st};width:108px;display:block;margin-top:3px" oninput="srcChange('${ck}')">` +
+    (ex ? `<button class="btn-o" id="srcsave-${id}" style="display:none;padding:2px 6px;font-size:10px;margin-top:3px" onclick="srcSave('${ck}')">💾 存入名單</button>` : '') +
+    `<div id="srcmsg-${id}" style="font-size:10px;color:#64748b"></div>`;
+}
+
+function srcChange(ck, srcChanged) {
+  const id = ck.replace('|','_');
+  const a = ASSETS.find(x => x[0] === ck); if (!a) return;
+  const src = document.getElementById('src-' + id).value;
+  const symEl = document.getElementById('sym-' + id);
+  if (srcChanged) {                                   // 換來源 → 帶出常見格式的交易對
+    const code = String(a[1] || a[2] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cur = symEl.value.trim();
+    if (src === 'CN' || src === 'EMPTY') symEl.value = '';
+    else if (['BINANCE','BYBIT','BYBIT_LINEAR'].includes(src)) symEl.value = /USDT$/.test(cur) ? cur.replace('-', '') : code + 'USDT';
+    else if (src === 'KUCOIN') symEl.value = /USDT$/.test(cur) ? cur.replace(/-?USDT$/, '-USDT') : code + '-USDT';
+    else if (/USDT$/.test(cur) || !cur) symEl.value = code;
+  }
+  a[3] = symEl.value.trim() || null;
+  a[4] = src;
+  const pr = document.getElementById('pr-' + id), ps = document.getElementById('ps-' + id);
+  if (pr && srcChanged) pr.value = src === 'CN' ? '---' : '';
+  if (ps) { ps.textContent = '—'; ps.style.color = '#475569'; }
+  const rec = EXTRA.assets.find(x => x.ck === ck && x.source);
+  const btn = document.getElementById('srcsave-' + id);
+  const msg = document.getElementById('srcmsg-' + id);
+  const dirty = rec && (rec.source !== a[4] || (rec.symbol || null) !== a[3]);
+  if (btn) btn.style.display = dirty ? '' : 'none';
+  if (msg) { msg.style.color = '#fcd34d';
+    msg.textContent = rec ? (dirty ? '今次已生效，未存入名單' : '') : '今次已生效（內建標的，只限今次）'; }
+  if (pr) ddPreview(ck);
+}
+
+async function srcSave(ck) {
+  const id = ck.replace('|','_');
+  const btn = document.getElementById('srcsave-' + id), msg = document.getElementById('srcmsg-' + id);
+  const say = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c || '#64748b'; } };
+  const a = ASSETS.find(x => x[0] === ck); if (!a) return;
+  if (a[4] !== 'CN' && a[4] !== 'EMPTY' && !a[3]) return say('這個價格來源需要交易對／代碼', '#fca5a5');
+  if (btn) btn.disabled = true;
+  try {
+    const latest = await ghReadExtra();                        // 以 GitHub 上最新的名單為準
+    const rec = latest.assets.find(x => x.ck === ck && x.source);
+    if (!rec) throw new Error(ck + ' 不在 ' + EXTRA_PATH);
+    rec.source = a[4]; rec.symbol = a[3];
+    await ghWrite(EXTRA_PATH, JSON.stringify(latest, null, 2) + '\n',
+      `Mag admin: ${a[2]} price source → ${a[4]} ${a[3] || ''}`.trim(), t => say(t));
+    EXTRA = latest;
+    if (btn) { btn.disabled = false; btn.style.display = 'none'; }
+    say('✓ 已存入 ' + EXTRA_PATH, '#34d399');
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    say('❌ ' + e.message, '#fca5a5');
+  }
 }
 
 // ── 距高點預覽（與 index.html #ddhigh 同口徑：進場期內網站價最高點、日曆日、創新高歸零）──
