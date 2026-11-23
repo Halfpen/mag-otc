@@ -1,0 +1,16 @@
+{
+  "assets": [
+    {
+      "ck": "stocks|TSM",
+      "name": "TSM",
+      "display": "TSM",
+      "symbol": "TSMUSDT",
+      "source": "BYBIT",
+      "aliases": [
+        "TSM"
+      ],
+      "group": "美股",
+      "added": "2026-11-23"
+    }
+  ]
+}
